@@ -144,7 +144,7 @@ export function Playlist() {
               return (
                 <div 
                   key={track.id}
-                  onDoubleClick={() => actions.playTrack(track.id)}
+                  onClick={() => actions.playTrack(track.id)}
                   className={`flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] select-none ${bgClass}`}
                 >
                   <div className="w-6 flex justify-center shrink-0">
