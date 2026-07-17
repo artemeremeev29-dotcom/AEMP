@@ -47,7 +47,7 @@ function AppContent() {
       </div>
 
       {/* BLOCK 2: Player Body */}
-      <div className="h-[160px] shrink-0 bg-[#2a2a2a] flex flex-col relative">
+      <div className="h-[120px] shrink-0 bg-[#2a2a2a] flex flex-col relative">
         <div className="flex flex-1">
           {/* Left: Album Cover */}
           <div className="w-[170px] flex flex-col border-r border-[#3a3a3a] shrink-0">
