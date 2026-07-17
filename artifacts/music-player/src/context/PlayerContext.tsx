@@ -109,7 +109,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       removeTrack: (id) => {
         setPlaylist(prev => prev.filter(t => t.id !== id));
         if (currentTrackId === id) {
-          audioActions.togglePlayPause(); // pause if removing current
+          // Останавливаем только если реально играет — иначе togglePlayPause запустит воспроизведение
+          if (audioState.isPlaying) {
+            audioActions.togglePlayPause();
+          }
+          setCurrentTrackId(null);
         }
       },
       playTrack,

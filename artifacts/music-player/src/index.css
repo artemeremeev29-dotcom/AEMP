@@ -46,9 +46,10 @@
   background: var(--orange);
 }
 
-/* EQ Slider specific styling */
-input[type=range][orient=vertical] {
-  appearance: slider-vertical;
+/* EQ Slider: вертикальные слайдеры через writing-mode (стандартный способ) */
+input[type=range].eq-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
   width: 6px;
   cursor: pointer;
   accent-color: var(--orange);

@@ -18,18 +18,22 @@ export function Playlist() {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const audio = document.createElement('audio');
+      audio.preload = 'metadata'; // без этого метаданные не загружаются в некоторых браузерах
       const timeout = setTimeout(() => {
+        audio.src = '';
         URL.revokeObjectURL(url);
         resolve(0);
-      }, 3000);
+      }, 4000);
       audio.onloadedmetadata = () => {
         clearTimeout(timeout);
-        const dur = isFinite(audio.duration) ? audio.duration : 0;
+        const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+        audio.src = '';
         URL.revokeObjectURL(url);
         resolve(dur);
       };
       audio.onerror = () => {
         clearTimeout(timeout);
+        audio.src = '';
         URL.revokeObjectURL(url);
         resolve(0);
       };

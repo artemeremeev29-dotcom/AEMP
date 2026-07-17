@@ -72,7 +72,7 @@ function AppContent() {
                  {formatTime(audioState.currentTime)}
                </div>
                <div className="text-[#ff8c00] text-[10px] opacity-80" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
-                 00:{formatTime(audioState.duration)}
+                 {formatTime(audioState.duration)}
                </div>
             </div>
             {/* Spectrum Analyzer */}
@@ -84,8 +84,15 @@ function AppContent() {
 
         {/* Seekbar */}
         <div className="h-[12px] bg-[#141414] flex items-center relative group cursor-pointer border-t border-[#3a3a3a]" onClick={handleSeek} ref={progressBarRef}>
-           <div className="h-[4px] bg-[#ff8c00] absolute left-0 top-[4px] pointer-events-none" style={{ width: `${(audioState.currentTime / (audioState.duration || 1)) * 100}%` }} />
-           <div className="w-[12px] h-[12px] bg-[#ff8c00] rounded-full absolute top-[0px] shadow-[0_0_5px_#ff8c00] pointer-events-none" style={{ left: `calc(${(audioState.currentTime / (audioState.duration || 1)) * 100}% - 6px)` }} />
+           {(() => {
+             const pct = audioState.duration > 0
+               ? Math.min(100, Math.max(0, (audioState.currentTime / audioState.duration) * 100))
+               : 0;
+             return <>
+               <div className="h-[4px] bg-[#ff8c00] absolute left-0 top-[4px] pointer-events-none" style={{ width: `${pct}%` }} />
+               <div className="w-[12px] h-[12px] bg-[#ff8c00] rounded-full absolute top-0 shadow-[0_0_5px_#ff8c00] pointer-events-none" style={{ left: `clamp(0px, calc(${pct}% - 6px), calc(100% - 12px))` }} />
+             </>;
+           })()}
         </div>
       </div>
 

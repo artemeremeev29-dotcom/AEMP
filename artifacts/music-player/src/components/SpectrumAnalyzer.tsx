@@ -56,12 +56,14 @@ export function SpectrumAnalyzer() {
       ctx.fillRect(0, 0, width, height);
       
       const barWidth = width / numBars;
-      const step = Math.floor(displayBins / numBars);
-      
+      // Защита от деления на ноль: step минимум 1
+      const step = Math.max(1, Math.floor(displayBins / numBars));
+
       for (let i = 0; i < numBars; i++) {
         let sum = 0;
         for (let j = 0; j < step; j++) {
-          sum += dataArray[i * step + j];
+          const idx = i * step + j;
+          if (idx < bufferLength) sum += dataArray[idx];
         }
         let average = sum / step;
         

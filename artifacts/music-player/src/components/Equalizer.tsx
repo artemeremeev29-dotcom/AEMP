@@ -60,8 +60,8 @@ export function Equalizer() {
                   step="0.1"
                   value={gain}
                   onChange={(e) => audioActions.setEqBand(index, parseFloat(e.target.value))}
-                  className="h-full z-10 w-2 appearance-none bg-transparent cursor-pointer"
-                  style={{ writingMode: 'vertical-lr', direction: 'rtl', accentColor: '#ff8c00' } as any}
+                  className="eq-slider h-full z-10 bg-transparent"
+                  style={{ accentColor: '#ff8c00' } as any}
                 />
               </div>
               <div className="text-[9px] text-[#888] font-mono group-hover:text-[#ccc]">
