@@ -99,23 +99,26 @@ function AppContent() {
       {/* BLOCK 3: Transport Panel */}
       <TransportControls onToggleEQ={() => setShowEQ(!showEQ)} isEQActive={showEQ} />
 
-      {/* BLOCK 8: Equalizer */}
-      <AnimatePresence initial={false}>
-        {showEQ && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 150, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="shrink-0 bg-[#2a2a2a] border-b border-[#3a3a3a] overflow-hidden z-10"
-          >
-            <Equalizer />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* BLOCKS 4-7: Playlist + EQ overlay */}
+      <div className="flex-1 relative min-h-0">
+        <Playlist />
 
-      {/* BLOCKS 4-7: Playlist */}
-      <Playlist />
+        {/* EQ появляется поверх плейлиста — высота плеера не меняется */}
+        <AnimatePresence initial={false}>
+          {showEQ && (
+            <motion.div
+              initial={{ y: '-100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '-100%', opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="absolute inset-x-0 top-0 bg-[#2a2a2a] border-b border-[#3a3a3a] z-20 shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+              style={{ height: 140 }}
+            >
+              <Equalizer />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
