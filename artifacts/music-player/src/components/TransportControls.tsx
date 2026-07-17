@@ -1,103 +1,50 @@
-import React, { useRef, useState } from 'react';
-import { usePlayer, Track } from '../context/PlayerContext';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Volume2, VolumeX } from 'lucide-react';
+import React from 'react';
+import { usePlayer } from '../context/PlayerContext';
+import { Play, Pause, SkipBack, SkipForward, Square, Volume2, VolumeX, Menu } from 'lucide-react';
 
-function formatTime(seconds: number) {
-  if (isNaN(seconds)) return "00:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
+export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () => void, isEQActive: boolean }) {
+  const { audioState, audioActions, actions, playlist, currentTrackId } = usePlayer();
 
-export function TransportControls() {
-  const { audioState, audioActions, actions, isShuffle, repeatMode, currentTrackId, playlist } = usePlayer();
-  const progressBarRef = useRef<HTMLDivElement>(null);
+  const handleStop = () => {
+    if (audioState.isPlaying) {
+       audioActions.togglePlayPause();
+    }
+    audioActions.seek(0);
+  };
 
-  const currentTrack = playlist.find(t => t.id === currentTrackId);
-
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!progressBarRef.current || audioState.duration === 0) return;
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioActions.seek(percent * audioState.duration);
+  const handlePlayPause = () => {
+    if (currentTrackId) {
+      audioActions.togglePlayPause();
+    } else if (playlist.length > 0) {
+      actions.playTrack(playlist[0].id);
+    }
   };
 
   return (
-    <div className="bg-[#111] border-t-2 border-[#333] p-6 flex flex-col gap-4">
-      {/* Progress Bar */}
-      <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-        <span className="w-12 text-right text-accent">{formatTime(audioState.currentTime)}</span>
-        <div 
-          ref={progressBarRef}
-          className="flex-1 h-3 bg-[#0d0d0d] rounded-none cursor-pointer relative overflow-hidden group border border-[#333]"
-          onClick={handleSeek}
-        >
-          <div 
-            className="absolute top-0 left-0 h-full bg-accent transition-all duration-100 ease-linear"
-            style={{ width: `${(audioState.currentTime / (audioState.duration || 1)) * 100}%` }}
-          />
-        </div>
-        <span className="w-12 text-foreground">{formatTime(audioState.duration)}</span>
+    <div className="h-[40px] shrink-0 bg-[#ff8c00] flex items-center px-4 gap-4 text-[#1e1e1e]">
+      
+      {/* Transport Buttons */}
+      <div className="flex items-center gap-1">
+        <button onClick={actions.playPrev} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Предыдущий">
+          <SkipBack size={18} className="fill-current" />
+        </button>
+        <button onClick={handlePlayPause} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Пауза/Воспроизведение">
+          {audioState.isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
+        </button>
+        <button onClick={actions.playNext} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Следующий">
+          <SkipForward size={18} className="fill-current" />
+        </button>
+        <button onClick={handleStop} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm ml-2" title="Стоп">
+          <Square size={16} className="fill-current" />
+        </button>
       </div>
 
-      <div className="flex items-center justify-between">
-        {/* Now Playing Info */}
-        <div className="flex items-center gap-4 w-1/3 min-w-0">
-          <div className="truncate min-w-0">
-            <div className="text-sm font-bold text-accent truncate uppercase">
-              {currentTrack ? currentTrack.name : 'НЕТ ТРЕКА'}
-            </div>
-            <div className="text-xs text-muted-foreground truncate uppercase">
-              {currentTrack ? currentTrack.artist : 'ДОБАВЬТЕ ФАЙЛЫ'}
-            </div>
-          </div>
-        </div>
-
-        {/* Playback Controls */}
-        <div className="flex items-center gap-4 w-1/3 justify-center">
-          <button 
-            onClick={actions.toggleShuffle}
-            title="Случайный порядок"
-            className={`w-8 h-8 flex items-center justify-center border ${isShuffle ? 'border-accent bg-[#1a1a1a] text-accent' : 'border-[#333] bg-[#0d0d0d] text-muted-foreground'} hover:border-accent hover:text-accent transition-colors`}
-          >
-            <Shuffle size={14} />
-          </button>
-          
-          <button onClick={actions.playPrev} className="w-10 h-10 flex items-center justify-center border border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors">
-            <SkipBack size={18} />
-          </button>
-          
-          <button 
-            onClick={() => {
-              if (currentTrackId) {
-                audioActions.togglePlayPause();
-              } else if (playlist.length > 0) {
-                actions.playTrack(playlist[0].id);
-              }
-            }}
-            className="w-12 h-12 flex items-center justify-center border-2 border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors"
-          >
-            {audioState.isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current translate-x-[2px]" />}
-          </button>
-          
-          <button onClick={actions.playNext} className="w-10 h-10 flex items-center justify-center border border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors">
-            <SkipForward size={18} />
-          </button>
-          
-          <button 
-            onClick={actions.toggleRepeat}
-            title="Повтор"
-            className={`w-8 h-8 flex items-center justify-center border ${repeatMode !== 'off' ? 'border-accent bg-[#1a1a1a] text-accent' : 'border-[#333] bg-[#0d0d0d] text-muted-foreground'} hover:border-accent hover:text-accent transition-colors`}
-          >
-            {repeatMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
-          </button>
-        </div>
-
-        {/* Volume Control */}
-        <div className="flex items-center gap-3 w-1/3 justify-end group">
-          <button onClick={audioActions.toggleMute} className="text-accent hover:text-white transition-colors">
-            {audioState.isMuted || audioState.volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
+      {/* Volume */}
+      <div className="flex items-center gap-2 w-[120px] ml-4">
+        <button onClick={audioActions.toggleMute} className="p-1 hover:bg-black/15 rounded-sm">
+          {audioState.isMuted || audioState.volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+        <div className="flex-1 flex items-center">
           <input
             type="range"
             min="0"
@@ -105,10 +52,24 @@ export function TransportControls() {
             step="0.01"
             value={audioState.isMuted ? 0 : audioState.volume}
             onChange={(e) => audioActions.setVolume(parseFloat(e.target.value))}
-            className="w-24 h-2 bg-[#0d0d0d] border border-[#333] rounded-none appearance-none cursor-pointer accent-accent"
+            className="w-full h-[4px] bg-[#1e1e1e] appearance-none cursor-pointer slider-thumb-dark"
           />
         </div>
       </div>
+
+      <div className="flex-1" />
+
+      {/* Right Controls */}
+      <button 
+        onClick={onToggleEQ}
+        className={`px-2 py-0.5 text-xs font-bold border border-[#1e1e1e] rounded-sm transition-colors ${isEQActive ? 'bg-[#1e1e1e] text-[#ff8c00]' : 'hover:bg-black/15'}`}
+      >
+        EQ
+      </button>
+
+      <button className="p-1.5 hover:bg-black/15 transition-colors rounded-sm">
+        <Menu size={16} />
+      </button>
     </div>
   );
 }

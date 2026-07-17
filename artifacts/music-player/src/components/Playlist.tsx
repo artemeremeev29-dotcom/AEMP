@@ -1,16 +1,16 @@
 import React, { useRef, useState, DragEvent } from 'react';
 import { usePlayer, Track } from '../context/PlayerContext';
-import { Plus, X, Music2, Play } from 'lucide-react';
+import { Play, MoreVertical, ChevronLeft, Star, Settings, Plus, Search, FileText, Minus, ArrowUp, ArrowDown, LayoutGrid, ChevronsRight } from 'lucide-react';
 
 function formatDuration(seconds: number) {
-  if (!seconds || isNaN(seconds)) return "--:--";
+  if (!seconds || isNaN(seconds)) return "00:00";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 export function Playlist() {
-  const { playlist, currentTrackId, audioState, actions, audioActions } = usePlayer();
+  const { playlist, currentTrackId, actions } = usePlayer();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -18,7 +18,6 @@ export function Playlist() {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const audio = document.createElement('audio');
-      // Timeout fallback — in some iframes loadedmetadata / onerror never fires
       const timeout = setTimeout(() => {
         URL.revokeObjectURL(url);
         resolve(0);
@@ -59,9 +58,7 @@ export function Playlist() {
           artist: "Неизвестный исполнитель",
           duration
         });
-      } catch {
-        // Skip problematic files silently
-      }
+      } catch {}
     }
 
     if (newTracks.length > 0) {
@@ -73,11 +70,7 @@ export function Playlist() {
     e.preventDefault();
     setIsDragging(true);
   };
-
-  const onDragLeave = () => {
-    setIsDragging(false);
-  };
-
+  const onDragLeave = () => setIsDragging(false);
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -86,21 +79,40 @@ export function Playlist() {
     }
   };
 
+  const totalTime = playlist.reduce((acc, t) => acc + t.duration, 0);
+
   return (
     <div 
-      className={`flex flex-col h-full bg-[#0d0d0d] border border-[#333] rounded-none overflow-hidden transition-colors ${isDragging ? 'border-accent bg-accent/5' : ''}`}
+      className={`flex-1 flex flex-col min-h-0 bg-[#2a2a2a] ${isDragging ? 'border-2 border-[#ff8c00]' : ''}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div className="flex justify-between items-center p-4 border-b border-[#333] bg-[#111]">
-        <h2 className="text-sm font-bold text-accent tracking-widest uppercase">ПЛЕЙЛИСТ</h2>
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 text-xs font-bold bg-[#ff6a00] text-black border border-[#ff8c00] px-3 py-1.5 rounded-none hover:bg-[#ff8c00] uppercase transition-colors"
-        >
-          <Plus size={14} /> ДОБАВИТЬ ФАЙЛЫ
-        </button>
+      {/* BLOCK 4: Playlist Navigation */}
+      <div className="h-[32px] shrink-0 bg-[#1e1e1e] flex items-center px-2 border-b border-[#3a3a3a] text-[#999] justify-between">
+        <div className="flex items-center gap-2">
+           <MoreVertical size={14} className="cursor-pointer hover:text-white" />
+           <ChevronLeft size={16} className="cursor-pointer hover:text-white" />
+        </div>
+        <div className="text-[11px] uppercase tracking-wider font-bold text-[#888]">По умолчанию</div>
+        <div className="bg-[#ff8c00] text-[#1e1e1e] text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 cursor-pointer hover:bg-[#ffa500] shadow-sm">
+           Default <Play size={8} className="fill-current" />
+        </div>
+      </div>
+
+      {/* BLOCK 5: Playlist Info */}
+      <div className="h-[28px] shrink-0 bg-[#2a2a2a] border-b border-[#3a3a3a] flex items-center justify-between px-3 text-[10px] text-[#888]">
+        <div>
+           {formatDuration(totalTime)} | {playlist.length} треков | ~{(playlist.length * 4.2).toFixed(1)} MB
+        </div>
+        <div className="flex gap-3">
+           <Star size={12} className="cursor-pointer hover:text-[#ff8c00]" />
+           <Settings size={12} className="cursor-pointer hover:text-[#ff8c00]" />
+        </div>
+      </div>
+
+      {/* BLOCK 6: Playlist Items */}
+      <div className="flex-1 overflow-y-auto bg-[#1e1e1e] text-[#ccc] text-xs">
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -109,77 +121,69 @@ export function Playlist() {
           accept=".mp3,.flac,.wav,.ogg,.aac,.m4a,audio/*"
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
-              // Convert to Array immediately before resetting input
               const files = Array.from(e.target.files);
               e.target.value = '';
               processFiles(files);
             }
           }}
         />
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
         {playlist.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 text-center">
-            <Music2 size={48} className="opacity-20" />
-            <p className="text-sm">Перетащите аудиофайлы сюда<br/>или нажмите «ДОБАВИТЬ ФАЙЛЫ»</p>
+          <div className="h-full flex flex-col items-center justify-center opacity-50 p-8 text-center text-[#888]">
+            <p>Перетащите аудиофайлы сюда или нажмите "+" внизу</p>
           </div>
         ) : (
-          <table className="w-full text-sm text-left border-spacing-0 border-collapse">
-            <thead>
-              <tr className="text-xs text-accent uppercase tracking-wider border-b border-[#333]">
-                <th className="p-2 w-8"></th>
-                <th className="p-2">НАЗВАНИЕ</th>
-                <th className="p-2">ИСПОЛНИТЕЛЬ</th>
-                <th className="p-2 text-right font-mono">ВРЕМЯ</th>
-                <th className="p-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {playlist.map((track, i) => {
-                const isPlaying = track.id === currentTrackId;
-                const rowBg = i % 2 === 0 ? 'bg-[#111]' : 'bg-[#0d0d0d]';
-                return (
-                  <tr 
-                    key={track.id}
-                    onDoubleClick={() => actions.playTrack(track.id)}
-                    className={`group border-b border-[#333] hover:bg-[#1a1a1a] transition-colors select-none ${rowBg} ${isPlaying ? 'text-accent' : 'text-foreground'}`}
-                  >
-                    <td className="p-2 text-center text-muted-foreground w-8">
-                      {isPlaying ? (
-                        <span className="text-accent">▶</span>
-                      ) : (
-                        <span className="group-hover:hidden text-xs">{i + 1}</span>
-                      )}
-                      <Play 
-                        size={12} 
-                        className={`hidden ${!isPlaying ? 'group-hover:inline-block cursor-pointer text-muted-foreground hover:text-foreground' : ''}`}
-                        onClick={() => actions.playTrack(track.id)}
-                      />
-                    </td>
-                    <td className="p-2 font-medium truncate max-w-[200px]" title={track.name}>
-                      {track.name}
-                    </td>
-                    <td className="p-2 text-muted-foreground truncate max-w-[150px]" title={track.artist}>
-                      {track.artist}
-                    </td>
-                    <td className="p-2 text-right font-mono text-xs text-muted-foreground">
-                      {formatDuration(track.duration)}
-                    </td>
-                    <td className="p-2 text-right w-8">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); actions.removeTrack(track.id); }}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1"
-                      >
-                        <X size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="flex flex-col">
+            {playlist.map((track, i) => {
+              const isPlaying = track.id === currentTrackId;
+              const bgClass = i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252525]';
+              return (
+                <div 
+                  key={track.id}
+                  onDoubleClick={() => actions.playTrack(track.id)}
+                  className={`flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] select-none ${bgClass}`}
+                >
+                  <div className="w-6 flex justify-center shrink-0">
+                    <input type="checkbox" className="accent-[#ff8c00] w-3 h-3 cursor-pointer" />
+                  </div>
+                  <div className="w-8 text-right pr-3 text-[#888] font-mono text-[10px] shrink-0">
+                    {isPlaying ? <Play size={10} className="text-[#ff8c00] fill-current ml-auto" /> : i + 1}
+                  </div>
+                  <div className={`flex-1 truncate pr-2 ${isPlaying ? 'text-[#ff8c00]' : ''}`}>
+                    {track.artist !== "Неизвестный исполнитель" ? <span className="font-bold">{track.artist} - </span> : ''}{track.name}
+                  </div>
+                  <div className={`w-12 text-right font-mono text-[10px] shrink-0 ${isPlaying ? 'text-[#ff8c00]' : 'text-[#888]'}`}>
+                    {formatDuration(track.duration)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
+      </div>
+
+      {/* BLOCK 7: Bottom Panel */}
+      <div className="h-[32px] shrink-0 bg-[#1e1e1e] border-t border-[#3a3a3a] flex items-center px-2 justify-between">
+        <button 
+          onClick={() => fileInputRef.current?.click()}
+          className="text-[#cccccc] hover:text-[#ff8c00] p-1 border border-transparent hover:border-[#3a3a3a] bg-[#2a2a2a] flex items-center justify-center w-[24px] h-[24px] rounded-sm transition-colors"
+          title="Добавить файлы"
+        >
+          <Plus size={16} />
+        </button>
+        <div className="flex gap-1.5 text-[#888] items-center">
+           <button className="p-1 hover:text-[#cccccc]"><Minus size={14}/></button>
+           <button className="p-1 hover:text-[#cccccc]"><ArrowUp size={14}/></button>
+           <button className="p-1 hover:text-[#cccccc]"><ArrowDown size={14}/></button>
+           <button className="p-1 hover:text-[#cccccc]"><LayoutGrid size={14}/></button>
+           <div className="w-[1px] h-4 bg-[#3a3a3a] mx-1" />
+           <div className="flex items-center gap-1 bg-[#141414] border border-[#3a3a3a] px-2 w-[120px] h-[22px]">
+             <Search size={10} />
+             <span className="text-[10px] opacity-50 truncate">Быстрый поиск...</span>
+           </div>
+           <button className="p-1 hover:text-[#cccccc]"><ChevronsRight size={14}/></button>
+           <button className="p-1 hover:text-[#cccccc]"><FileText size={14}/></button>
+        </div>
       </div>
     </div>
   );

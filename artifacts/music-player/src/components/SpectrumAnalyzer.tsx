@@ -20,7 +20,6 @@ export function SpectrumAnalyzer() {
       }
     });
     resizeObserver.observe(container);
-
     return () => resizeObserver.disconnect();
   }, []);
 
@@ -31,34 +30,29 @@ export function SpectrumAnalyzer() {
 
     const analyser = audioActions.getAnalyserNode();
     
-    // Fallback drawing if no analyser
     if (!analyser) {
-      ctx.fillStyle = '#09090b';
+      ctx.fillStyle = '#141414';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       return;
     }
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const displayBins = Math.floor(bufferLength * 0.4);
+    const numBars = 50;
     
-    // We only use the lower 1/3 of the frequencies for a better look
-    const displayBins = Math.floor(bufferLength * 0.3);
-    const numBars = 100;
-    
-    // Initialize peaks array if needed
     if (peaksRef.current.length !== numBars) {
       peaksRef.current = new Array(numBars).fill(0);
     }
 
     const draw = () => {
       animationRef.current = requestAnimationFrame(draw);
-      
       const width = canvas.width;
       const height = canvas.height;
       
       analyser.getByteFrequencyData(dataArray);
       
-      ctx.fillStyle = '#09090b';
+      ctx.fillStyle = '#141414';
       ctx.fillRect(0, 0, width, height);
       
       const barWidth = width / numBars;
@@ -71,14 +65,12 @@ export function SpectrumAnalyzer() {
         }
         let average = sum / step;
         
-        // Exponential decay for smoothing
         const targetHeight = (average / 255) * height;
         
-        // Update peak
         if (targetHeight > peaksRef.current[i]) {
           peaksRef.current[i] = targetHeight;
         } else {
-          peaksRef.current[i] -= 2; // peak drop speed
+          peaksRef.current[i] -= 1.5;
           if (peaksRef.current[i] < 0) peaksRef.current[i] = 0;
         }
         
@@ -86,38 +78,23 @@ export function SpectrumAnalyzer() {
         const barHeight = targetHeight;
         const y = height - barHeight;
         
-        // Draw bar
-        const gradient = ctx.createLinearGradient(0, height, 0, 0);
-        gradient.addColorStop(0, '#ff6a00'); // Orange bottom
-        gradient.addColorStop(1, '#ffcc00'); // Yellow-orange top
-        
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = '#ff8c00';
         ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
         
-        // Draw peak
-        ctx.fillStyle = '#ffcc00';
+        // Peak dots
+        ctx.fillStyle = '#ffa500';
         ctx.fillRect(x + 1, height - peaksRef.current[i] - 2, barWidth - 2, 2);
       }
-      
-      // Inner glow overlay
-      const glowGrad = ctx.createLinearGradient(0, 0, 0, height);
-      glowGrad.addColorStop(0, 'rgba(9, 9, 11, 0.5)');
-      glowGrad.addColorStop(1, 'rgba(9, 9, 11, 0)');
-      ctx.fillStyle = glowGrad;
-      ctx.fillRect(0, 0, width, height);
     };
 
     draw();
 
-    return () => {
-      cancelAnimationFrame(animationRef.current);
-    };
-  }, [audioActions, audioState.isPlaying]); // Re-bind if play state changes because analyser might be created on play
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [audioActions, audioState.isPlaying]);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[180px] bg-background relative border-y border-border">
+    <div ref={containerRef} className="w-full h-full bg-[#141414] absolute inset-0">
       <canvas ref={canvasRef} className="w-full h-full block" />
-      <div className="absolute inset-0 scanlines z-10" />
     </div>
   );
 }

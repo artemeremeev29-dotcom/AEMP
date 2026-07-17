@@ -1,49 +1,114 @@
-import { PlayerProvider } from './context/PlayerContext';
+import React, { useState, useRef } from 'react';
+import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { SpectrumAnalyzer } from './components/SpectrumAnalyzer';
 import { Equalizer } from './components/Equalizer';
 import { Playlist } from './components/Playlist';
 import { TransportControls } from './components/TransportControls';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Repeat, Shuffle, Repeat1, Copy, Activity, Minus, Square, X } from 'lucide-react';
+
+function formatTime(seconds: number) {
+  if (isNaN(seconds)) return "00:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
 function AppContent() {
+  const [showEQ, setShowEQ] = useState(false);
+  const { audioState, audioActions, playlist, currentTrackId, isShuffle, repeatMode, actions } = usePlayer();
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const currentTrack = playlist.find(t => t.id === currentTrackId);
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!progressBarRef.current || audioState.duration === 0) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audioActions.seek(percent * audioState.duration);
+  };
+
   return (
-    <div className="min-h-screen w-full bg-background text-foreground flex flex-col font-mono overflow-hidden">
-      {/* Header */}
-      <header className="h-14 border-b-2 border-accent flex items-center px-6 shrink-0 bg-[#0d0d0d] z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-none bg-[#111] text-accent border border-accent flex items-center justify-center font-bold text-xl leading-none">
-            V
-          </div>
-          <h1 className="font-bold tracking-widest text-lg uppercase text-foreground">
-            ВОЛЬТ<span className="text-accent font-light">ПЛЕЕР</span>
-          </h1>
+    <div className="w-full max-w-[520px] flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.8)] bg-[#2a2a2a] overflow-hidden h-[90vh] max-h-[800px]">
+      {/* BLOCK 1: Status Bar */}
+      <div className="h-[28px] shrink-0 bg-[#1e1e1e] flex justify-between items-center px-2 border-b border-[#3a3a3a] text-[#999] text-[11px] font-mono select-none">
+        <div className="truncate pr-4">
+          {currentTrack ? (
+            `:: ${formatTime(audioState.currentTime)} :: ${currentTrack.artist} - ${currentTrack.name} :: MP3 :: 44.1 kHz, 320 kbps,`
+          ) : (
+            `:: Вольт Плеер :: AIMP3 4X Skin ::`
+          )}
         </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-0">
-        {/* Visualizer Zone */}
-        <div className="shrink-0 h-48 w-full relative z-0">
-          <SpectrumAnalyzer />
+        <div className="flex gap-2 text-[#888] shrink-0">
+          <Minus size={12} className="cursor-pointer hover:text-white" />
+          <Square size={10} className="cursor-pointer hover:text-white mt-[1px]" />
+          <X size={12} className="cursor-pointer hover:text-[#ff8c00]" />
         </div>
+      </div>
 
-        {/* Panels Layout */}
-        <div className="flex-1 flex gap-6 p-6 min-h-0 bg-background/50">
-          {/* Left: Playlist */}
-          <div className="w-2/3 flex flex-col">
-            <Playlist />
+      {/* BLOCK 2: Player Body */}
+      <div className="h-[160px] shrink-0 bg-[#2a2a2a] flex flex-col relative">
+        <div className="flex flex-1">
+          {/* Left: Album Cover */}
+          <div className="w-[170px] flex flex-col border-r border-[#3a3a3a] shrink-0">
+            {/* Tiny buttons row */}
+            <div className="h-[24px] bg-[#2a2a2a] border-b border-[#3a3a3a] flex items-center justify-around px-2">
+               <button onClick={actions.toggleShuffle} className={`p-1 ${isShuffle ? 'text-[#ff8c00]' : 'text-[#888] hover:text-[#ff8c00]'}`} title="Случайный порядок"><Shuffle size={12}/></button>
+               <button onClick={actions.toggleRepeat} className={`p-1 ${repeatMode !== 'off' ? 'text-[#ff8c00]' : 'text-[#888] hover:text-[#ff8c00]'}`} title="Повтор">{repeatMode === 'one' ? <Repeat1 size={12}/> : <Repeat size={12}/>}</button>
+               <button className="p-1 text-[#888] hover:text-[#ff8c00] text-[10px] font-bold" title="Повтор A-B">A-B</button>
+               <button className="p-1 text-[#888] hover:text-[#ff8c00]" title="Эффекты"><Activity size={12}/></button>
+               <button className="p-1 text-[#888] hover:text-[#ff8c00]" title="Копировать инфо"><Copy size={12}/></button>
+            </div>
+            {/* Cover */}
+            <div className="flex-1 bg-[#1e1e1e] m-2 flex items-center justify-center relative border border-[#141414] shadow-inner">
+               <div style={{ width: 0, height: 0, borderLeft: '20px solid transparent', borderRight: '20px solid transparent', borderBottom: '34px solid #ff8c00', opacity: 0.8 }} />
+            </div>
           </div>
 
-          {/* Right: Equalizer */}
-          <div className="w-1/3 flex flex-col">
+          {/* Right: Visualizer + Time */}
+          <div className="flex-1 flex flex-col relative min-w-0">
+            <div className="absolute top-2 right-4 flex flex-col items-end z-10 pointer-events-none">
+               <div className="text-[#ff8c00] text-4xl font-bold tracking-tighter drop-shadow-[0_0_5px_rgba(255,140,0,0.4)]" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
+                 {formatTime(audioState.currentTime)}
+               </div>
+               <div className="text-[#ff8c00] text-[10px] opacity-80" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
+                 00:{formatTime(audioState.duration)}
+               </div>
+            </div>
+            {/* Spectrum Analyzer */}
+            <div className="flex-1 bg-[#141414] mt-2 ml-2 mr-2 mb-2 border border-[#3a3a3a] relative overflow-hidden">
+               <SpectrumAnalyzer />
+            </div>
+          </div>
+        </div>
+
+        {/* Seekbar */}
+        <div className="h-[12px] bg-[#141414] flex items-center relative group cursor-pointer border-t border-[#3a3a3a]" onClick={handleSeek} ref={progressBarRef}>
+           <div className="h-[4px] bg-[#ff8c00] absolute left-0 top-[4px] pointer-events-none" style={{ width: `${(audioState.currentTime / (audioState.duration || 1)) * 100}%` }} />
+           <div className="w-[12px] h-[12px] bg-[#ff8c00] rounded-full absolute top-[0px] shadow-[0_0_5px_#ff8c00] pointer-events-none" style={{ left: `calc(${(audioState.currentTime / (audioState.duration || 1)) * 100}% - 6px)` }} />
+        </div>
+      </div>
+
+      {/* BLOCK 3: Transport Panel */}
+      <TransportControls onToggleEQ={() => setShowEQ(!showEQ)} isEQActive={showEQ} />
+
+      {/* BLOCK 8: Equalizer */}
+      <AnimatePresence initial={false}>
+        {showEQ && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 150, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="shrink-0 bg-[#2a2a2a] border-b border-[#3a3a3a] overflow-hidden z-10"
+          >
             <Equalizer />
-          </div>
-        </div>
-      </main>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Transport Controls Zone */}
-      <footer className="shrink-0 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <TransportControls />
-      </footer>
+      {/* BLOCKS 4-7: Playlist */}
+      <Playlist />
     </div>
   );
 }
