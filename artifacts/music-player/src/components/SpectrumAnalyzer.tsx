@@ -88,14 +88,14 @@ export function SpectrumAnalyzer() {
         
         // Draw bar
         const gradient = ctx.createLinearGradient(0, height, 0, 0);
-        gradient.addColorStop(0, '#ccff00'); // Vivid volt accent
-        gradient.addColorStop(1, '#ffffff');
+        gradient.addColorStop(0, '#ff6a00'); // Orange bottom
+        gradient.addColorStop(1, '#ffcc00'); // Yellow-orange top
         
         ctx.fillStyle = gradient;
         ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
         
         // Draw peak
-        ctx.fillStyle = 'rgba(204, 255, 0, 0.8)';
+        ctx.fillStyle = '#ffcc00';
         ctx.fillRect(x + 1, height - peaksRef.current[i] - 2, barWidth - 2, 2);
       }
       
@@ -117,6 +117,7 @@ export function SpectrumAnalyzer() {
   return (
     <div ref={containerRef} className="w-full h-full min-h-[180px] bg-background relative border-y border-border">
       <canvas ref={canvasRef} className="w-full h-full block" />
+      <div className="absolute inset-0 scanlines z-10" />
     </div>
   );
 }

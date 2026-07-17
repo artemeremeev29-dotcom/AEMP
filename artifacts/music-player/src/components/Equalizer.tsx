@@ -4,12 +4,12 @@ import { EQ_BANDS } from '../hooks/useAudioEngine';
 import { RotateCcw } from 'lucide-react';
 
 const PRESETS = {
-  'Flat': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  'Bass Boost': [9, 7, 5, 2, 0, 0, 0, 0, 0, 0],
-  'Treble Boost': [0, 0, 0, 0, 0, 0, 3, 5, 7, 9],
-  'Vocal Boost': [-2, -1, 0, 3, 5, 4, 2, 0, -1, -2],
-  'Electronic': [6, 5, 1, 0, -2, 2, 1, 3, 5, 6],
-  'Classical': [4, 3, 0, 0, 0, 0, 0, 2, 3, 4]
+  'Плоский': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  'Усиление басов': [9, 7, 5, 2, 0, 0, 0, 0, 0, 0],
+  'Усиление высоких': [0, 0, 0, 0, 0, 0, 3, 5, 7, 9],
+  'Вокал': [-2, -1, 0, 3, 5, 4, 2, 0, -1, -2],
+  'Электронная': [6, 5, 1, 0, -2, 2, 1, 3, 5, 6],
+  'Классическая': [4, 3, 0, 0, 0, 0, 0, 2, 3, 4]
 };
 
 function formatFreq(freq: number) {
@@ -21,29 +21,28 @@ export function Equalizer() {
   const { audioState, audioActions } = usePlayer();
 
   return (
-    <div className="flex flex-col h-full bg-card border border-border rounded-lg p-6 shadow-xl">
+    <div className="flex flex-col h-full bg-[#111] border border-[#333] rounded-none p-6 shadow-none">
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-sm font-bold text-foreground tracking-widest uppercase flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          Equalizer
+        <h2 className="text-sm font-bold text-accent tracking-widest uppercase flex items-center gap-2">
+          ЭКВАЛАЙЗЕР
         </h2>
         <div className="flex gap-2">
           <select 
-            className="bg-background border border-border text-xs text-foreground py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-accent appearance-none font-mono"
+            className="bg-[#0d0d0d] border border-[#333] text-accent py-1 px-2 rounded-none focus:outline-none focus:border-accent appearance-none font-mono"
             onChange={(e) => {
               const preset = PRESETS[e.target.value as keyof typeof PRESETS];
               if (preset) audioActions.setAllEq(preset);
             }}
-            defaultValue="Flat"
+            defaultValue="Плоский"
           >
             {Object.keys(PRESETS).map(name => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
           <button 
-            onClick={() => audioActions.setAllEq(PRESETS['Flat'])}
+            onClick={() => audioActions.setAllEq(PRESETS['Плоский'])}
             className="text-muted-foreground hover:text-accent transition-colors p-1"
-            title="Reset"
+            title="Сброс"
           >
             <RotateCcw size={16} />
           </button>

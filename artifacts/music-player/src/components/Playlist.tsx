@@ -47,7 +47,7 @@ export function Playlist() {
         id: crypto.randomUUID(),
         file,
         name,
-        artist: "Unknown Artist",
+        artist: "Неизвестный исполнитель",
         duration
       });
     }
@@ -74,18 +74,18 @@ export function Playlist() {
 
   return (
     <div 
-      className={`flex flex-col h-full bg-card border border-border rounded-lg shadow-xl overflow-hidden transition-colors ${isDragging ? 'border-accent bg-accent/5' : ''}`}
+      className={`flex flex-col h-full bg-[#0d0d0d] border border-[#333] rounded-none overflow-hidden transition-colors ${isDragging ? 'border-accent bg-accent/5' : ''}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div className="flex justify-between items-center p-4 border-b border-border bg-background/50">
-        <h2 className="text-sm font-bold text-foreground tracking-widest uppercase">Playlist</h2>
+      <div className="flex justify-between items-center p-4 border-b border-[#333] bg-[#111]">
+        <h2 className="text-sm font-bold text-accent tracking-widest uppercase">ПЛЕЙЛИСТ</h2>
         <button 
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded hover:bg-accent transition-colors"
+          className="flex items-center gap-2 text-xs font-bold bg-[#ff6a00] text-black border border-[#ff8c00] px-3 py-1.5 rounded-none hover:bg-[#ff8c00] uppercase transition-colors"
         >
-          <Plus size={14} /> Add Files
+          <Plus size={14} /> ДОБАВИТЬ ФАЙЛЫ
         </button>
         <input 
           type="file" 
@@ -105,35 +105,32 @@ export function Playlist() {
         {playlist.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 text-center">
             <Music2 size={48} className="opacity-20" />
-            <p className="text-sm">Drag and drop audio files here<br/>or click "Add Files"</p>
+            <p className="text-sm">Перетащите аудиофайлы сюда<br/>или нажмите «ДОБАВИТЬ ФАЙЛЫ»</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left border-spacing-0 border-collapse">
             <thead>
-              <tr className="text-xs text-muted-foreground uppercase tracking-wider border-b border-border">
+              <tr className="text-xs text-accent uppercase tracking-wider border-b border-[#333]">
                 <th className="p-2 w-8"></th>
-                <th className="p-2">Title</th>
-                <th className="p-2">Artist</th>
-                <th className="p-2 text-right font-mono">Time</th>
+                <th className="p-2">НАЗВАНИЕ</th>
+                <th className="p-2">ИСПОЛНИТЕЛЬ</th>
+                <th className="p-2 text-right font-mono">ВРЕМЯ</th>
                 <th className="p-2 w-8"></th>
               </tr>
             </thead>
             <tbody>
               {playlist.map((track, i) => {
                 const isPlaying = track.id === currentTrackId;
+                const rowBg = i % 2 === 0 ? 'bg-[#111]' : 'bg-[#0d0d0d]';
                 return (
                   <tr 
                     key={track.id}
                     onDoubleClick={() => actions.playTrack(track.id)}
-                    className={`group border-b border-border/50 hover:bg-background/80 transition-colors select-none ${isPlaying ? 'bg-accent/10 text-accent' : 'text-foreground'}`}
+                    className={`group border-b border-[#333] hover:bg-[#1a1a1a] transition-colors select-none ${rowBg} ${isPlaying ? 'text-accent' : 'text-foreground'}`}
                   >
                     <td className="p-2 text-center text-muted-foreground w-8">
                       {isPlaying ? (
-                        <div className="flex items-end justify-center gap-0.5 h-3">
-                          <div className={`w-1 bg-accent ${audioState.isPlaying ? 'animate-[bounce_0.8s_infinite]' : ''} h-full`}></div>
-                          <div className={`w-1 bg-accent ${audioState.isPlaying ? 'animate-[bounce_1.2s_infinite]' : ''} h-2/3`}></div>
-                          <div className={`w-1 bg-accent ${audioState.isPlaying ? 'animate-[bounce_1s_infinite]' : ''} h-full`}></div>
-                        </div>
+                        <span className="text-accent">▶</span>
                       ) : (
                         <span className="group-hover:hidden text-xs">{i + 1}</span>
                       )}

@@ -23,51 +23,48 @@ export function TransportControls() {
   };
 
   return (
-    <div className="bg-card border-t border-border p-6 flex flex-col gap-4">
+    <div className="bg-[#111] border-t-2 border-[#333] p-6 flex flex-col gap-4">
       {/* Progress Bar */}
       <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-        <span className="w-12 text-right">{formatTime(audioState.currentTime)}</span>
+        <span className="w-12 text-right text-accent">{formatTime(audioState.currentTime)}</span>
         <div 
           ref={progressBarRef}
-          className="flex-1 h-2 bg-background rounded-full cursor-pointer relative overflow-hidden group border border-border/50"
+          className="flex-1 h-3 bg-[#0d0d0d] rounded-none cursor-pointer relative overflow-hidden group border border-[#333]"
           onClick={handleSeek}
         >
           <div 
             className="absolute top-0 left-0 h-full bg-accent transition-all duration-100 ease-linear"
             style={{ width: `${(audioState.currentTime / (audioState.duration || 1)) * 100}%` }}
           />
-          {/* Hover indicator (could add logic later) */}
         </div>
-        <span className="w-12">{formatTime(audioState.duration)}</span>
+        <span className="w-12 text-foreground">{formatTime(audioState.duration)}</span>
       </div>
 
       <div className="flex items-center justify-between">
         {/* Now Playing Info */}
         <div className="flex items-center gap-4 w-1/3 min-w-0">
-          <div className="w-12 h-12 bg-background border border-border rounded flex items-center justify-center shrink-0 shadow-inner">
-            <div className="w-4 h-4 rounded-full bg-accent/20 border border-accent/40" />
-          </div>
           <div className="truncate min-w-0">
-            <div className="text-sm font-semibold text-foreground truncate">
-              {currentTrack ? currentTrack.name : 'No track loaded'}
+            <div className="text-sm font-bold text-accent truncate uppercase">
+              {currentTrack ? currentTrack.name : 'НЕТ ТРЕКА'}
             </div>
-            <div className="text-xs text-muted-foreground truncate">
-              {currentTrack ? currentTrack.artist : 'Add some files to begin'}
+            <div className="text-xs text-muted-foreground truncate uppercase">
+              {currentTrack ? currentTrack.artist : 'ДОБАВЬТЕ ФАЙЛЫ'}
             </div>
           </div>
         </div>
 
         {/* Playback Controls */}
-        <div className="flex items-center gap-6 w-1/3 justify-center">
+        <div className="flex items-center gap-4 w-1/3 justify-center">
           <button 
             onClick={actions.toggleShuffle}
-            className={`transition-colors ${isShuffle ? 'text-accent' : 'text-muted-foreground hover:text-foreground'}`}
+            title="Случайный порядок"
+            className={`w-8 h-8 flex items-center justify-center border ${isShuffle ? 'border-accent bg-[#1a1a1a] text-accent' : 'border-[#333] bg-[#0d0d0d] text-muted-foreground'} hover:border-accent hover:text-accent transition-colors`}
           >
-            <Shuffle size={18} />
+            <Shuffle size={14} />
           </button>
           
-          <button onClick={actions.playPrev} className="text-foreground hover:text-accent transition-colors">
-            <SkipBack size={24} />
+          <button onClick={actions.playPrev} className="w-10 h-10 flex items-center justify-center border border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors">
+            <SkipBack size={18} />
           </button>
           
           <button 
@@ -78,26 +75,27 @@ export function TransportControls() {
                 actions.playTrack(playlist[0].id);
               }
             }}
-            className="w-14 h-14 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_20px_rgba(204,255,0,0.2)] hover:shadow-[0_0_30px_rgba(204,255,0,0.4)]"
+            className="w-12 h-12 flex items-center justify-center border-2 border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors"
           >
-            {audioState.isPlaying ? <Pause size={24} className="fill-current" /> : <Play size={24} className="fill-current translate-x-[2px]" />}
+            {audioState.isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current translate-x-[2px]" />}
           </button>
           
-          <button onClick={actions.playNext} className="text-foreground hover:text-accent transition-colors">
-            <SkipForward size={24} />
+          <button onClick={actions.playNext} className="w-10 h-10 flex items-center justify-center border border-accent bg-[#0d0d0d] text-accent hover:bg-accent hover:text-black transition-colors">
+            <SkipForward size={18} />
           </button>
           
           <button 
             onClick={actions.toggleRepeat}
-            className={`transition-colors ${repeatMode !== 'off' ? 'text-accent' : 'text-muted-foreground hover:text-foreground'}`}
+            title="Повтор"
+            className={`w-8 h-8 flex items-center justify-center border ${repeatMode !== 'off' ? 'border-accent bg-[#1a1a1a] text-accent' : 'border-[#333] bg-[#0d0d0d] text-muted-foreground'} hover:border-accent hover:text-accent transition-colors`}
           >
-            {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
+            {repeatMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
           </button>
         </div>
 
         {/* Volume Control */}
         <div className="flex items-center gap-3 w-1/3 justify-end group">
-          <button onClick={audioActions.toggleMute} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={audioActions.toggleMute} className="text-accent hover:text-white transition-colors">
             {audioState.isMuted || audioState.volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
           <input
@@ -107,7 +105,7 @@ export function TransportControls() {
             step="0.01"
             value={audioState.isMuted ? 0 : audioState.volume}
             onChange={(e) => audioActions.setVolume(parseFloat(e.target.value))}
-            className="w-24 h-1 bg-background rounded-full appearance-none cursor-pointer accent-accent"
+            className="w-24 h-2 bg-[#0d0d0d] border border-[#333] rounded-none appearance-none cursor-pointer accent-accent"
           />
         </div>
       </div>

@@ -6,15 +6,15 @@ import { TransportControls } from './components/TransportControls';
 
 function AppContent() {
   return (
-    <div className="min-h-screen w-full bg-background text-foreground flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen w-full bg-background text-foreground flex flex-col font-mono overflow-hidden">
       {/* Header */}
-      <header className="h-14 border-b border-border flex items-center px-6 shrink-0 bg-card z-10 shadow-sm">
+      <header className="h-14 border-b-2 border-accent flex items-center px-6 shrink-0 bg-[#0d0d0d] z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-accent text-background flex items-center justify-center font-bold text-xl leading-none">
+          <div className="w-8 h-8 rounded-none bg-[#111] text-accent border border-accent flex items-center justify-center font-bold text-xl leading-none">
             V
           </div>
           <h1 className="font-bold tracking-widest text-lg uppercase text-foreground">
-            Volt<span className="text-muted-foreground font-light">Player</span>
+            ВОЛЬТ<span className="text-accent font-light">ПЛЕЕР</span>
           </h1>
         </div>
       </header>
