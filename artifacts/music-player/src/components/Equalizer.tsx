@@ -18,12 +18,13 @@ export function Equalizer() {
   const { audioState, audioActions } = usePlayer();
 
   return (
-    <div className="flex flex-col h-full bg-[#2a2a2a] p-4 text-[#cccccc]">
-      <div className="flex justify-between items-center mb-4 border-b border-[#3a3a3a] pb-2">
-        <h2 className="text-xs font-bold text-[#ff8c00] tracking-wider">ЭКВАЛАЙЗЕР</h2>
-        <div className="flex gap-2">
-          <select 
-            className="bg-[#1e1e1e] border border-[#3a3a3a] text-[#cccccc] text-[11px] py-1 px-2 focus:outline-none focus:border-[#ff8c00] cursor-pointer"
+    <div className="flex flex-col h-full bg-[#2a2a2a] text-[#cccccc]">
+      {/* Компактный заголовок */}
+      <div className="flex items-center justify-between px-3 py-1 border-b border-[#3a3a3a] shrink-0">
+        <span className="text-[10px] font-bold text-[#ff8c00] tracking-widest">ЭКВАЛАЙЗЕР</span>
+        <div className="flex items-center gap-1">
+          <select
+            className="bg-[#1e1e1e] border border-[#3a3a3a] text-[#cccccc] text-[10px] py-0.5 px-1.5 focus:outline-none focus:border-[#ff8c00] cursor-pointer"
             onChange={(e) => {
               const preset = PRESETS[e.target.value as keyof typeof PRESETS];
               if (preset) audioActions.setAllEq(preset);
@@ -34,16 +35,16 @@ export function Equalizer() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <button 
+          <button
             onClick={() => audioActions.setAllEq(PRESETS['ПЛОСКИЙ'])}
-            className="text-[11px] border border-[#3a3a3a] bg-[#1e1e1e] px-2 py-1 hover:text-[#ff8c00] hover:border-[#ff8c00] transition-colors"
+            className="text-[10px] border border-[#3a3a3a] bg-[#1e1e1e] px-1.5 py-0.5 hover:text-[#ff8c00] hover:border-[#ff8c00] transition-colors"
           >
             СБРОС
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex justify-between items-stretch px-2">
+      <div className="flex-1 flex justify-between items-stretch px-2 py-1">
         {EQ_BANDS.map((freq, index) => {
           const gain = audioState.eqGains[index] || 0;
           return (
