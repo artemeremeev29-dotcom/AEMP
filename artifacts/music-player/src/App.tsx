@@ -65,19 +65,20 @@ function AppContent() {
             </div>
           </div>
 
-          {/* Right: Visualizer + Time */}
-          <div className="flex-1 flex flex-col relative min-w-0">
-            <div className="absolute top-2 right-4 flex flex-col items-end z-10 pointer-events-none">
-               <div className="text-[#ff8c00] text-4xl font-bold tracking-tighter drop-shadow-[0_0_5px_rgba(255,140,0,0.4)]" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
-                 {formatTime(audioState.currentTime)}
-               </div>
-               <div className="text-[#ff8c00] text-[10px] opacity-80" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
-                 {formatTime(audioState.duration)}
-               </div>
+          {/* Right: Time + Spectrum */}
+          <div className="flex-1 flex flex-col min-w-0 py-2 pr-2 pl-1 gap-1">
+            {/* Timer — верхняя часть как в оригинале */}
+            <div className="flex flex-col items-end shrink-0">
+              <div className="text-[#ff8c00] text-3xl font-bold leading-none drop-shadow-[0_0_5px_rgba(255,140,0,0.4)]" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
+                {formatTime(audioState.currentTime)}
+              </div>
+              <div className="text-[#ff8c00] text-[10px] opacity-70 mt-0.5" style={{ fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums' }}>
+                {formatTime(audioState.duration)}
+              </div>
             </div>
-            {/* Spectrum Analyzer */}
-            <div className="flex-1 bg-[#141414] mt-2 ml-2 mr-2 mb-2 border border-[#3a3a3a] relative overflow-hidden">
-               <SpectrumAnalyzer />
+            {/* Spectrum — компактное окно снизу */}
+            <div className="bg-[#141414] border border-[#3a3a3a] relative overflow-hidden" style={{ height: 48 }}>
+              <SpectrumAnalyzer />
             </div>
           </div>
         </div>
