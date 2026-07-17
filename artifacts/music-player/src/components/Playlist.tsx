@@ -16,43 +16,57 @@ export function Playlist() {
 
   const getDuration = (file: File): Promise<number> => {
     return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
       const audio = document.createElement('audio');
-      audio.src = URL.createObjectURL(file);
+      // Timeout fallback — in some iframes loadedmetadata / onerror never fires
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url);
+        resolve(0);
+      }, 3000);
       audio.onloadedmetadata = () => {
-        resolve(audio.duration);
-        URL.revokeObjectURL(audio.src);
+        clearTimeout(timeout);
+        const dur = isFinite(audio.duration) ? audio.duration : 0;
+        URL.revokeObjectURL(url);
+        resolve(dur);
       };
-      audio.onerror = () => resolve(0);
+      audio.onerror = () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(url);
+        resolve(0);
+      };
+      audio.src = url;
     });
   };
 
-  const processFiles = async (files: FileList | File[]) => {
-    // ensure interaction gesture triggers AudioContext init
-    audioActions.initAudioContext();
-
+  const processFiles = async (fileList: File[]) => {
     const allowedTypes = ['.mp3', '.flac', '.wav', '.ogg', '.aac', '.m4a'];
-    const validFiles = Array.from(files).filter(f => 
+    const validFiles = fileList.filter(f =>
       allowedTypes.some(ext => f.name.toLowerCase().endsWith(ext)) || f.type.startsWith('audio/')
     );
 
     if (validFiles.length === 0) return;
 
     const newTracks: Track[] = [];
-    
-    for (const file of validFiles) {
-      const duration = await getDuration(file);
-      const name = file.name.replace(/\.[^/.]+$/, "").replace(/[_\-]/g, " ");
 
-      newTracks.push({
-        id: crypto.randomUUID(),
-        file,
-        name,
-        artist: "Неизвестный исполнитель",
-        duration
-      });
+    for (const file of validFiles) {
+      try {
+        const duration = await getDuration(file);
+        const name = file.name.replace(/\.[^/.]+$/, "").replace(/[_\-]/g, " ");
+        newTracks.push({
+          id: crypto.randomUUID(),
+          file,
+          name,
+          artist: "Неизвестный исполнитель",
+          duration
+        });
+      } catch {
+        // Skip problematic files silently
+      }
     }
 
-    actions.addTracks(newTracks);
+    if (newTracks.length > 0) {
+      actions.addTracks(newTracks);
+    }
   };
 
   const onDragOver = (e: DragEvent) => {
@@ -67,8 +81,8 @@ export function Playlist() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files) {
-      processFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(Array.from(e.dataTransfer.files));
     }
   };
 
@@ -94,9 +108,12 @@ export function Playlist() {
           multiple 
           accept=".mp3,.flac,.wav,.ogg,.aac,.m4a,audio/*"
           onChange={(e) => {
-            if (e.target.files) processFiles(e.target.files);
-            // Reset input so same files can be added again if needed
-            e.target.value = '';
+            if (e.target.files && e.target.files.length > 0) {
+              // Convert to Array immediately before resetting input
+              const files = Array.from(e.target.files);
+              e.target.value = '';
+              processFiles(files);
+            }
           }}
         />
       </div>
