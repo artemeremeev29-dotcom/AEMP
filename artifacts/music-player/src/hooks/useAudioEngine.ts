@@ -25,6 +25,18 @@ export function useAudioEngine() {
   const volumeRef        = useRef<number>(0.8);
   const isMutedRef       = useRef<boolean>(false);
 
+  // Fade / crossfade settings refs
+  const fadeInMsRef      = useRef<number>(0);
+  const fadeOutMsRef     = useRef<number>(0);
+  const crossfadeMsRef   = useRef<number>(0);
+
+  // Timers for fade/crossfade
+  const fadeOutTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const crossfadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Previous audio element kept alive during crossfade
+  const prevCrossfadeGainRef = useRef<GainNode | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -34,7 +46,7 @@ export function useAudioEngine() {
 
   const onTrackEndRef = useRef<(() => void) | undefined>(undefined);
 
-  // ─── Audio context init (runs once on first user interaction) ───────────────
+  // ─── Audio context init ──────────────────────────────────────────────────────
   const initAudioContext = useCallback(() => {
     if (audioCtxRef.current) return;
 
@@ -66,7 +78,6 @@ export function useAudioEngine() {
     });
     eqNodesRef.current = eqNodes;
 
-    // Chain: source → eq[0]→…→eq[9] → analyser → gain → destination
     for (let i = 0; i < eqNodes.length - 1; i++) {
       eqNodes[i].connect(eqNodes[i + 1]);
     }
@@ -85,28 +96,62 @@ export function useAudioEngine() {
   }, []);
 
   // ─── Load a File and start playback ─────────────────────────────────────────
-  // Uses HTMLAudioElement + MediaElementSourceNode — NO arrayBuffer/decodeAudioData.
-  // The browser streams the file; no crash on large files.
   const loadFile = useCallback(async (file: File) => {
     initAudioContext();
     const ctx = audioCtxRef.current!;
+    if (ctx.state === 'suspended') await ctx.resume();
 
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-
-    // Stop and disconnect previous element
     cancelAnimationFrame(rafRef.current);
+
+    // Clear pending fade/crossfade timers
+    if (fadeOutTimerRef.current) { clearTimeout(fadeOutTimerRef.current); fadeOutTimerRef.current = null; }
+    if (crossfadeTimerRef.current) { clearTimeout(crossfadeTimerRef.current); crossfadeTimerRef.current = null; }
+
+    const crossMs = crossfadeMsRef.current;
     const prevAudio = audioElRef.current;
-    if (prevAudio) {
-      prevAudio.onended  = null;
-      prevAudio.onerror  = null;
-      prevAudio.pause();
-      prevAudio.src = '';
-    }
-    if (mediaSourceRef.current) {
-      try { mediaSourceRef.current.disconnect(); } catch (_) {}
-      mediaSourceRef.current = null;
+
+    if (crossMs > 0 && prevAudio && !prevAudio.paused && !prevAudio.ended) {
+      // ── CROSSFADE: reroute previous source through a fading gain ──
+      const crossGain = ctx.createGain();
+      const targetVol = isMutedRef.current ? 0 : volumeRef.current;
+      crossGain.gain.setValueAtTime(targetVol, ctx.currentTime);
+      crossGain.gain.linearRampToValueAtTime(0, ctx.currentTime + crossMs / 1000);
+      crossGain.connect(ctx.destination);
+
+      if (mediaSourceRef.current) {
+        try { mediaSourceRef.current.disconnect(); } catch (_) {}
+        mediaSourceRef.current.connect(crossGain);
+        mediaSourceRef.current = null;
+      }
+
+      // Disconnect any previous crossfade gain
+      if (prevCrossfadeGainRef.current) {
+        try { prevCrossfadeGainRef.current.disconnect(); } catch (_) {}
+      }
+      prevCrossfadeGainRef.current = crossGain;
+
+      const capturedPrev = prevAudio;
+      setTimeout(() => {
+        capturedPrev.pause();
+        capturedPrev.src = '';
+        try { crossGain.disconnect(); } catch (_) {}
+        if (prevCrossfadeGainRef.current === crossGain) prevCrossfadeGainRef.current = null;
+      }, crossMs + 300);
+
+      // Don't stop prev audio — it's fading out through crossGain
+      audioElRef.current = null;
+    } else {
+      // Normal stop of previous track
+      if (prevAudio) {
+        prevAudio.onended = null;
+        prevAudio.onerror = null;
+        prevAudio.pause();
+        prevAudio.src = '';
+      }
+      if (mediaSourceRef.current) {
+        try { mediaSourceRef.current.disconnect(); } catch (_) {}
+        mediaSourceRef.current = null;
+      }
     }
 
     // Revoke previous object URL
@@ -115,7 +160,26 @@ export function useAudioEngine() {
       objectUrlRef.current = null;
     }
 
-    // Create a new Audio element (each element can only be captured by MediaElementSource once)
+    // ── Apply fade-in (or crossfade-in) on main gain ──
+    const fadeInMs = fadeInMsRef.current;
+    const effectiveFadeIn = Math.max(fadeInMs, crossMs);
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.cancelScheduledValues(ctx.currentTime);
+      if (effectiveFadeIn > 0) {
+        gainNodeRef.current.gain.setValueAtTime(0, ctx.currentTime);
+        gainNodeRef.current.gain.linearRampToValueAtTime(
+          isMutedRef.current ? 0 : volumeRef.current,
+          ctx.currentTime + effectiveFadeIn / 1000
+        );
+      } else {
+        gainNodeRef.current.gain.setValueAtTime(
+          isMutedRef.current ? 0 : volumeRef.current,
+          ctx.currentTime
+        );
+      }
+    }
+
+    // ── Create new Audio element ──
     const audio = new Audio();
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
@@ -124,18 +188,53 @@ export function useAudioEngine() {
     audio.src = url;
     audioElRef.current = audio;
 
-    // Wire into Web Audio graph
     const source = ctx.createMediaElementSource(audio);
     source.connect(eqNodesRef.current[0] ?? gainNodeRef.current!);
     mediaSourceRef.current = source;
 
-    // Events
-    audio.onloadedmetadata = () => setDuration(audio.duration > 0 ? audio.duration : 0);
+    let crossfadeTriggered = false;
+
+    audio.onloadedmetadata = () => {
+      const dur = audio.duration;
+      setDuration(dur > 0 ? dur : 0);
+
+      // Schedule crossfade trigger (fires early, before track ends)
+      const cMs = crossfadeMsRef.current;
+      if (cMs > 0 && isFinite(dur) && dur > cMs / 1000 + 1) {
+        const triggerAt = (dur - cMs / 1000) * 1000;
+        crossfadeTimerRef.current = setTimeout(() => {
+          if (!crossfadeTriggered) {
+            crossfadeTriggered = true;
+            onTrackEndRef.current?.();
+          }
+        }, triggerAt);
+      }
+
+      // Schedule fade-out
+      const fMs = fadeOutMsRef.current;
+      if (fMs > 0 && isFinite(dur) && dur > fMs / 1000 + 0.5) {
+        const triggerAt = (dur - fMs / 1000 - 0.05) * 1000;
+        fadeOutTimerRef.current = setTimeout(() => {
+          if (gainNodeRef.current && audioCtxRef.current && !crossfadeTriggered) {
+            const now = audioCtxRef.current.currentTime;
+            gainNodeRef.current.gain.cancelScheduledValues(now);
+            gainNodeRef.current.gain.setValueAtTime(
+              isMutedRef.current ? 0 : volumeRef.current, now
+            );
+            gainNodeRef.current.gain.linearRampToValueAtTime(0, now + fMs / 1000);
+          }
+        }, Math.max(0, triggerAt));
+      }
+    };
+
     audio.onended = () => {
       cancelAnimationFrame(rafRef.current);
       setIsPlaying(false);
-      onTrackEndRef.current?.();
+      if (!crossfadeTriggered) {
+        onTrackEndRef.current?.();
+      }
     };
+
     audio.onerror = () => {
       cancelAnimationFrame(rafRef.current);
       setIsPlaying(false);
@@ -148,7 +247,6 @@ export function useAudioEngine() {
       setDuration(isFinite(audio.duration) ? audio.duration : 0);
       rafRef.current = requestAnimationFrame(tickProgress);
     } catch (err) {
-      // Autoplay blocked — user can press play manually
       console.warn('Autoplay blocked:', err);
       setIsPlaying(false);
     }
@@ -228,13 +326,10 @@ export function useAudioEngine() {
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
+      if (fadeOutTimerRef.current) clearTimeout(fadeOutTimerRef.current);
+      if (crossfadeTimerRef.current) clearTimeout(crossfadeTimerRef.current);
       const audio = audioElRef.current;
-      if (audio) {
-        audio.onended = null;
-        audio.onerror = null;
-        audio.pause();
-        audio.src = '';
-      }
+      if (audio) { audio.onended = null; audio.onerror = null; audio.pause(); audio.src = ''; }
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
       audioCtxRef.current?.close();
     };
@@ -253,6 +348,10 @@ export function useAudioEngine() {
       setOnTrackEnd: (cb: () => void) => { onTrackEndRef.current = cb; },
       getAnalyserNode,
       initAudioContext,
+      // Fade / crossfade setters — call when settings change
+      setFadeIn:   (ms: number) => { fadeInMsRef.current = ms; },
+      setFadeOut:  (ms: number) => { fadeOutMsRef.current = ms; },
+      setCrossfade:(ms: number) => { crossfadeMsRef.current = ms; },
     }
   };
 }

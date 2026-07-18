@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useAudioEngine, AudioEngineState } from '../hooks/useAudioEngine';
+import { useSettings } from './SettingsContext';
 
 export interface Track {
   id: string;
@@ -7,6 +8,7 @@ export interface Track {
   name: string;
   artist: string;
   duration: number;
+  coverArt?: string; // data URL from ID3 tags
 }
 
 interface PlayerContextType {
@@ -32,17 +34,24 @@ const PlayerContext = createContext<PlayerContextType | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { state: audioState, actions: audioActions } = useAudioEngine();
+  const { settings } = useSettings();
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
 
-  // Load playlist names from localStorage (for display only, files still need to be re-added)
+  // Sync fade/crossfade settings → audio engine
   useEffect(() => {
-    // Actually we can't persist files, so when reload it's empty. We could persist just the history, but prompt says:
-    // "Persist playlist track names (not files — can't serialize File objects) to localStorage"
-    // For now we'll just keep it empty on load since files are required to play.
-  }, []);
+    audioActions.setFadeIn(settings.fadeInMs);
+  }, [settings.fadeInMs, audioActions]);
+
+  useEffect(() => {
+    audioActions.setFadeOut(settings.fadeOutMs);
+  }, [settings.fadeOutMs, audioActions]);
+
+  useEffect(() => {
+    audioActions.setCrossfade(settings.crossfadeMs);
+  }, [settings.crossfadeMs, audioActions]);
 
   const playTrack = useCallback(async (id: string) => {
     const track = playlist.find(t => t.id === id);
@@ -57,7 +66,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playTrack(currentTrackId);
       return;
     }
-    
+
     let nextIndex = 0;
     if (isShuffle) {
       nextIndex = Math.floor(Math.random() * playlist.length);
@@ -66,7 +75,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       nextIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
       if (nextIndex >= playlist.length) {
         if (repeatMode === 'all') nextIndex = 0;
-        else return; // Stop playing
+        else return;
       }
     }
     playTrack(playlist[nextIndex].id);
@@ -78,17 +87,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audioActions.seek(0);
       return;
     }
-    
-    let prevIndex = 0;
+
     const currentIndex = playlist.findIndex(t => t.id === currentTrackId);
-    prevIndex = currentIndex > 0 ? currentIndex - 1 : playlist.length - 1;
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : playlist.length - 1;
     playTrack(playlist[prevIndex].id);
   }, [playlist, currentTrackId, audioState.currentTime, audioActions, playTrack]);
 
   useEffect(() => {
-    audioActions.setOnTrackEnd(() => {
-      playNext();
-    });
+    audioActions.setOnTrackEnd(() => playNext());
   }, [audioActions, playNext]);
 
   const value: PlayerContextType = {
@@ -101,18 +107,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     actions: {
       addTracks: (newTracks) => {
         setPlaylist(prev => [...prev, ...newTracks]);
-        // Auto play if first track added
-        if (playlist.length === 0 && newTracks.length > 0 && !currentTrackId) {
-          // Can't auto-play without gesture securely, so user has to click play
-        }
       },
       removeTrack: (id) => {
         setPlaylist(prev => prev.filter(t => t.id !== id));
         if (currentTrackId === id) {
-          // Останавливаем только если реально играет — иначе togglePlayPause запустит воспроизведение
-          if (audioState.isPlaying) {
-            audioActions.togglePlayPause();
-          }
+          if (audioState.isPlaying) audioActions.togglePlayPause();
           setCurrentTrackId(null);
         }
       },

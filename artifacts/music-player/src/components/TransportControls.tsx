@@ -1,14 +1,14 @@
 import React from 'react';
 import { usePlayer } from '../context/PlayerContext';
+import { useSettings } from '../context/SettingsContext';
 import { Play, Pause, SkipBack, SkipForward, Square, Volume2, VolumeX, Menu } from 'lucide-react';
 
-export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () => void, isEQActive: boolean }) {
+export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () => void; isEQActive: boolean }) {
   const { audioState, audioActions, actions, playlist, currentTrackId } = usePlayer();
+  const { setOpenSettings } = useSettings();
 
   const handleStop = () => {
-    if (audioState.isPlaying) {
-       audioActions.togglePlayPause();
-    }
+    if (audioState.isPlaying) audioActions.togglePlayPause();
     audioActions.seek(0);
   };
 
@@ -21,20 +21,22 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
   };
 
   return (
-    <div className="h-[40px] shrink-0 bg-[#ff8c00] flex items-center px-4 gap-4 text-[#1e1e1e]">
-      
-      {/* Transport Buttons */}
+    <div
+      className="h-[40px] shrink-0 flex items-center px-4 gap-4 text-[#1e1e1e]"
+      style={{ backgroundColor: 'var(--accent)' }}
+    >
+      {/* Transport */}
       <div className="flex items-center gap-1">
-        <button onClick={actions.playPrev} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Предыдущий">
+        <button onClick={actions.playPrev} className="p-1.5 hover:bg-black/15 rounded-sm transition-colors" title="Предыдущий">
           <SkipBack size={18} className="fill-current" />
         </button>
-        <button onClick={handlePlayPause} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Пауза/Воспроизведение">
+        <button onClick={handlePlayPause} className="p-1.5 hover:bg-black/15 rounded-sm transition-colors" title="Воспроизведение/Пауза">
           {audioState.isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
         </button>
-        <button onClick={actions.playNext} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm" title="Следующий">
+        <button onClick={actions.playNext} className="p-1.5 hover:bg-black/15 rounded-sm transition-colors" title="Следующий">
           <SkipForward size={18} className="fill-current" />
         </button>
-        <button onClick={handleStop} className="p-1.5 hover:bg-black/15 transition-colors rounded-sm ml-2" title="Стоп">
+        <button onClick={handleStop} className="p-1.5 hover:bg-black/15 rounded-sm ml-2 transition-colors" title="Стоп">
           <Square size={16} className="fill-current" />
         </button>
       </div>
@@ -46,12 +48,9 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
         </button>
         <div className="flex-1 flex items-center">
           <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
+            type="range" min="0" max="1" step="0.01"
             value={audioState.isMuted ? 0 : audioState.volume}
-            onChange={(e) => audioActions.setVolume(parseFloat(e.target.value))}
+            onChange={e => audioActions.setVolume(parseFloat(e.target.value))}
             className="w-full h-[4px] bg-[#1e1e1e] appearance-none cursor-pointer slider-thumb-dark"
           />
         </div>
@@ -59,15 +58,21 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
 
       <div className="flex-1" />
 
-      {/* Right Controls */}
-      <button 
+      {/* EQ toggle */}
+      <button
         onClick={onToggleEQ}
-        className={`px-2 py-0.5 text-xs font-bold border border-[#1e1e1e] rounded-sm transition-colors ${isEQActive ? 'bg-[#1e1e1e] text-[#ff8c00]' : 'hover:bg-black/15'}`}
+        className="px-2 py-0.5 text-xs font-bold border border-[#1e1e1e] rounded-sm transition-colors"
+        style={isEQActive ? { backgroundColor: '#1e1e1e', color: 'var(--accent)' } : {}}
       >
         EQ
       </button>
 
-      <button className="p-1.5 hover:bg-black/15 transition-colors rounded-sm">
+      {/* Settings */}
+      <button
+        onClick={() => setOpenSettings(true)}
+        className="p-1.5 hover:bg-black/15 rounded-sm transition-colors"
+        title="Настройки"
+      >
         <Menu size={16} />
       </button>
     </div>

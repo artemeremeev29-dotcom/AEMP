@@ -1,6 +1,9 @@
 import React, { useRef, useState, DragEvent } from 'react';
 import { usePlayer, Track } from '../context/PlayerContext';
-import { Play, MoreVertical, ChevronLeft, Star, Settings, Plus, Search, FileText, Minus, ArrowUp, ArrowDown, LayoutGrid, ChevronsRight } from 'lucide-react';
+import { Play, Plus, Search, FileText, Minus, ArrowUp, ArrowDown, LayoutGrid, ChevronsRight, MoreVertical, ChevronLeft, Star, Settings } from 'lucide-react';
+
+// @ts-ignore
+import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 
 function formatDuration(seconds: number) {
   if (!seconds || isNaN(seconds)) return "00:00";
@@ -9,129 +12,130 @@ function formatDuration(seconds: number) {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
+function getDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    const timeout = setTimeout(() => { audio.src = ''; URL.revokeObjectURL(url); resolve(0); }, 4000);
+    audio.onloadedmetadata = () => {
+      clearTimeout(timeout);
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+      audio.src = ''; URL.revokeObjectURL(url); resolve(dur);
+    };
+    audio.onerror = () => { clearTimeout(timeout); audio.src = ''; URL.revokeObjectURL(url); resolve(0); };
+    audio.src = url;
+  });
+}
+
+function getMetadata(file: File): Promise<{ name: string; artist: string; coverArt?: string }> {
+  return new Promise((resolve) => {
+    const fallback = {
+      name: file.name.replace(/\.[^/.]+$/, '').replace(/[_\-]/g, ' '),
+      artist: 'Неизвестный исполнитель',
+    };
+    try {
+      jsmediatags.read(file, {
+        onSuccess: (tag: any) => {
+          const tags = tag.tags || {};
+          const name = tags.title || fallback.name;
+          const artist = tags.artist || fallback.artist;
+          let coverArt: string | undefined;
+          if (tags.picture) {
+            try {
+              const { data, format } = tags.picture;
+              const bytes = new Uint8Array(data);
+              let binary = '';
+              bytes.forEach(b => { binary += String.fromCharCode(b); });
+              coverArt = `data:${format};base64,${btoa(binary)}`;
+            } catch (_) {}
+          }
+          resolve({ name, artist, coverArt });
+        },
+        onError: () => resolve(fallback),
+      });
+    } catch (_) {
+      resolve(fallback);
+    }
+  });
+}
+
 export function Playlist() {
   const { playlist, currentTrackId, actions } = usePlayer();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  const getDuration = (file: File): Promise<number> => {
-    return new Promise((resolve) => {
-      const url = URL.createObjectURL(file);
-      const audio = document.createElement('audio');
-      audio.preload = 'metadata'; // без этого метаданные не загружаются в некоторых браузерах
-      const timeout = setTimeout(() => {
-        audio.src = '';
-        URL.revokeObjectURL(url);
-        resolve(0);
-      }, 4000);
-      audio.onloadedmetadata = () => {
-        clearTimeout(timeout);
-        const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
-        audio.src = '';
-        URL.revokeObjectURL(url);
-        resolve(dur);
-      };
-      audio.onerror = () => {
-        clearTimeout(timeout);
-        audio.src = '';
-        URL.revokeObjectURL(url);
-        resolve(0);
-      };
-      audio.src = url;
-    });
-  };
 
   const processFiles = async (fileList: File[]) => {
     const allowedTypes = ['.mp3', '.flac', '.wav', '.ogg', '.aac', '.m4a'];
     const validFiles = fileList.filter(f =>
       allowedTypes.some(ext => f.name.toLowerCase().endsWith(ext)) || f.type.startsWith('audio/')
     );
-
     if (validFiles.length === 0) return;
 
     const newTracks: Track[] = [];
-
     for (const file of validFiles) {
       try {
-        const duration = await getDuration(file);
-        const name = file.name.replace(/\.[^/.]+$/, "").replace(/[_\-]/g, " ");
+        const [duration, meta] = await Promise.all([getDuration(file), getMetadata(file)]);
         newTracks.push({
           id: crypto.randomUUID(),
           file,
-          name,
-          artist: "Неизвестный исполнитель",
-          duration
+          name: meta.name,
+          artist: meta.artist,
+          duration,
+          coverArt: meta.coverArt,
         });
       } catch {}
     }
-
-    if (newTracks.length > 0) {
-      actions.addTracks(newTracks);
-    }
+    if (newTracks.length > 0) actions.addTracks(newTracks);
   };
 
-  const onDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  const onDragOver = (e: DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const onDragLeave = () => setIsDragging(false);
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(Array.from(e.dataTransfer.files));
-    }
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
   };
 
-  const totalTime = playlist.reduce((acc, t) => acc + t.duration, 0);
+  const onFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    processFiles(files);
+    e.target.value = '';
+  };
+
+  const totalDuration = playlist.reduce((a, t) => a + (t.duration || 0), 0);
+  const totalMb = playlist.reduce((a, t) => a + t.file.size, 0) / (1024 * 1024);
 
   return (
-    <div 
-      className={`flex-1 flex flex-col min-h-0 bg-[#2a2a2a] ${isDragging ? 'border-2 border-[#ff8c00]' : ''}`}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
-      {/* BLOCK 4: Playlist Navigation */}
-      <div className="h-[32px] shrink-0 bg-[#1e1e1e] flex items-center px-2 border-b border-[#3a3a3a] text-[#999] justify-between">
-        <div className="flex items-center gap-2">
-           <MoreVertical size={14} className="cursor-pointer hover:text-white" />
-           <ChevronLeft size={16} className="cursor-pointer hover:text-white" />
-        </div>
-        <div className="text-[11px] uppercase tracking-wider font-bold text-[#888]">По умолчанию</div>
-        <div className="bg-[#ff8c00] text-[#1e1e1e] text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 cursor-pointer hover:bg-[#ffa500] shadow-sm">
-           Default <Play size={8} className="fill-current" />
+    <div className="flex flex-col h-full bg-[#222] select-none">
+      {/* Playlist header */}
+      <div className="h-[30px] shrink-0 bg-[#1e1e1e] border-b border-[#333] flex items-center px-2 gap-2">
+        <button className="text-[#666] hover:text-[#ccc] transition-colors"><MoreVertical size={13} /></button>
+        <button className="text-[#666] hover:text-[#ccc] transition-colors"><ChevronLeft size={13} /></button>
+        <span className="flex-1 text-center text-[11px] text-[#999] truncate">ПО УМОЛЧАНИЮ</span>
+        <button
+          className="text-[11px] font-bold px-2 py-0.5 rounded-sm text-[#1e1e1e]"
+          style={{ backgroundColor: 'var(--accent)' }}
+        >Default ▶</button>
+      </div>
+
+      {/* Stats */}
+      <div className="h-[24px] shrink-0 bg-[#1e1e1e] border-b border-[#2a2a2a] flex items-center px-3 justify-between">
+        <span className="text-[10px] text-[#666] font-mono">
+          {formatDuration(totalDuration)} | {playlist.length} {playlist.length === 1 ? 'трек' : playlist.length < 5 ? 'трека' : 'треков'} | ~{totalMb.toFixed(1)} МБ
+        </span>
+        <div className="flex gap-2">
+          <button className="text-[#555] hover:text-[#999]"><Star size={11} /></button>
+          <button className="text-[#555] hover:text-[#999]"><Settings size={11} /></button>
         </div>
       </div>
 
-      {/* BLOCK 5: Playlist Info */}
-      <div className="h-[28px] shrink-0 bg-[#2a2a2a] border-b border-[#3a3a3a] flex items-center justify-between px-3 text-[10px] text-[#888]">
-        <div>
-           {formatDuration(totalTime)} | {playlist.length} треков | ~{(playlist.length * 4.2).toFixed(1)} MB
-        </div>
-        <div className="flex gap-3">
-           <Star size={12} className="cursor-pointer hover:text-[#ff8c00]" />
-           <Settings size={12} className="cursor-pointer hover:text-[#ff8c00]" />
-        </div>
-      </div>
-
-      {/* BLOCK 6: Playlist Items */}
-      <div className="flex-1 overflow-y-auto bg-[#1e1e1e] text-[#ccc] text-xs">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          multiple 
-          accept=".mp3,.flac,.wav,.ogg,.aac,.m4a,audio/*"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              const files = Array.from(e.target.files);
-              e.target.value = '';
-              processFiles(files);
-            }
-          }}
-        />
-
+      {/* Track list */}
+      <div
+        className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 transition-colors ${isDragging ? 'bg-[#2a2a2a]' : ''}`}
+        onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+      >
         {playlist.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-50 p-8 text-center text-[#888]">
             <p>Перетащите аудиофайлы сюда или нажмите "+" внизу</p>
@@ -139,24 +143,39 @@ export function Playlist() {
         ) : (
           <div className="flex flex-col">
             {playlist.map((track, i) => {
-              const isPlaying = track.id === currentTrackId;
+              const isActive = track.id === currentTrackId;
               const bgClass = i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252525]';
               return (
-                <div 
+                <div
                   key={track.id}
                   onClick={() => actions.playTrack(track.id)}
-                  className={`flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] select-none ${bgClass}`}
+                  className={`flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] ${bgClass}`}
                 >
-                  <div className="w-6 flex justify-center shrink-0">
-                    <input type="checkbox" className="accent-[#ff8c00] w-3 h-3 cursor-pointer" />
+                  <div className="w-5 flex justify-center shrink-0">
+                    {isActive
+                      ? <Play size={9} style={{ color: 'var(--accent)' }} className="fill-current" />
+                      : <span className="text-[10px] text-[#555] font-mono">{i + 1}</span>
+                    }
                   </div>
-                  <div className="w-8 text-right pr-3 text-[#888] font-mono text-[10px] shrink-0">
-                    {isPlaying ? <Play size={10} className="text-[#ff8c00] fill-current ml-auto" /> : i + 1}
+                  {/* Mini cover art thumbnail */}
+                  {track.coverArt ? (
+                    <img src={track.coverArt} className="w-4 h-4 object-cover shrink-0 mr-1.5 opacity-90" alt="" />
+                  ) : (
+                    <div className="w-4 h-4 bg-[#333] shrink-0 mr-1.5" />
+                  )}
+                  <div
+                    className="flex-1 truncate pr-2 text-[11px]"
+                    style={isActive ? { color: 'var(--accent)' } : {}}
+                  >
+                    {track.artist !== 'Неизвестный исполнитель'
+                      ? <><span className="font-semibold">{track.artist}</span>{' — '}{track.name}</>
+                      : track.name
+                    }
                   </div>
-                  <div className={`flex-1 truncate pr-2 ${isPlaying ? 'text-[#ff8c00]' : ''}`}>
-                    {track.artist !== "Неизвестный исполнитель" ? <span className="font-bold">{track.artist} - </span> : ''}{track.name}
-                  </div>
-                  <div className={`w-12 text-right font-mono text-[10px] shrink-0 ${isPlaying ? 'text-[#ff8c00]' : 'text-[#888]'}`}>
+                  <div
+                    className="w-10 text-right font-mono text-[10px] shrink-0"
+                    style={isActive ? { color: 'var(--accent)' } : { color: '#555' }}
+                  >
                     {formatDuration(track.duration)}
                   </div>
                 </div>
@@ -166,29 +185,33 @@ export function Playlist() {
         )}
       </div>
 
-      {/* BLOCK 7: Bottom Panel */}
-      <div className="h-[32px] shrink-0 bg-[#1e1e1e] border-t border-[#3a3a3a] flex items-center px-2 justify-between">
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="text-[#cccccc] hover:text-[#ff8c00] p-1 border border-transparent hover:border-[#3a3a3a] bg-[#2a2a2a] flex items-center justify-center w-[24px] h-[24px] rounded-sm transition-colors"
-          title="Добавить файлы"
-        >
-          <Plus size={16} />
+      {/* Bottom toolbar */}
+      <div className="h-[30px] shrink-0 bg-[#1a1a1a] border-t border-[#333] flex items-center px-2 gap-1">
+        <button onClick={() => fileInputRef.current?.click()} className="text-[#666] hover:text-[#ccc] p-1 transition-colors" title="Добавить файлы">
+          <Plus size={14} />
         </button>
-        <div className="flex gap-1.5 text-[#888] items-center">
-           <button className="p-1 hover:text-[#cccccc]"><Minus size={14}/></button>
-           <button className="p-1 hover:text-[#cccccc]"><ArrowUp size={14}/></button>
-           <button className="p-1 hover:text-[#cccccc]"><ArrowDown size={14}/></button>
-           <button className="p-1 hover:text-[#cccccc]"><LayoutGrid size={14}/></button>
-           <div className="w-[1px] h-4 bg-[#3a3a3a] mx-1" />
-           <div className="flex items-center gap-1 bg-[#141414] border border-[#3a3a3a] px-2 w-[120px] h-[22px]">
-             <Search size={10} />
-             <span className="text-[10px] opacity-50 truncate">Быстрый поиск...</span>
-           </div>
-           <button className="p-1 hover:text-[#cccccc]"><ChevronsRight size={14}/></button>
-           <button className="p-1 hover:text-[#cccccc]"><FileText size={14}/></button>
+        <button onClick={() => { const t = playlist.find(t => t.id === currentTrackId); if (t) actions.removeTrack(t.id); }} className="text-[#666] hover:text-[#ccc] p-1 transition-colors" title="Удалить выбранный">
+          <Minus size={14} />
+        </button>
+        <button onClick={() => { const i = playlist.findIndex(t => t.id === currentTrackId); if (i > 0) actions.reorderPlaylist(i, i - 1); }} className="text-[#666] hover:text-[#ccc] p-1 transition-colors">
+          <ArrowUp size={14} />
+        </button>
+        <button onClick={() => { const i = playlist.findIndex(t => t.id === currentTrackId); if (i >= 0 && i < playlist.length - 1) actions.reorderPlaylist(i, i + 1); }} className="text-[#666] hover:text-[#ccc] p-1 transition-colors">
+          <ArrowDown size={14} />
+        </button>
+        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><LayoutGrid size={14} /></button>
+        <div className="flex-1 flex items-center gap-1 mx-1">
+          <Search size={11} className="text-[#444]" />
+          <input
+            type="text" placeholder="Быстрый поиск..." readOnly
+            className="flex-1 bg-transparent text-[10px] text-[#666] placeholder-[#444] outline-none"
+          />
         </div>
+        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><ChevronsRight size={14} /></button>
+        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><FileText size={14} /></button>
       </div>
+
+      <input ref={fileInputRef} type="file" multiple accept="audio/*" className="hidden" onChange={onFileInput} />
     </div>
   );
 }
