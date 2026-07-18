@@ -7,7 +7,9 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:mobile": "vite build --config vite.config.mobile.ts",
+    "cap:sync": "pnpm run build:mobile && npx cap sync android"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -75,6 +77,9 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
     "jsmediatags": "^3.9.7"
   }
 }

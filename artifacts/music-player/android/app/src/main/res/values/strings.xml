@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Вольт Плеер</string>
+    <string name="title_activity_main">Вольт Плеер</string>
+    <string name="package_name">com.aimp4x.musicplayer</string>
+    <string name="custom_url_scheme">com.aimp4x.musicplayer</string>
+</resources>

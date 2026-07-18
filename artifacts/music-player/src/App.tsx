@@ -29,7 +29,7 @@ function AppContent() {
   };
 
   return (
-    <div className="w-full max-w-[420px] flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.8)] bg-[#2a2a2a] overflow-hidden h-[90vh] max-h-[800px]">
+    <div className="w-full max-w-[520px] flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.8)] bg-[#2a2a2a] overflow-hidden h-[90vh] max-h-[800px]">
       {/* BLOCK 1: Status Bar */}
       <div className="h-[28px] shrink-0 bg-[#1e1e1e] flex justify-between items-center px-2 border-b border-[#3a3a3a] text-[#999] text-[11px] font-mono select-none">
         <div className="truncate pr-4">
