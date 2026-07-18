@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.aimp4x.musicplayer',
-  appName: 'Вольт Плеер',
+  appId: 'com.aemp.musicplayer',
+  appName: 'AEMP',
   webDir: 'dist/public',
   bundledWebRuntime: false,
   android: {

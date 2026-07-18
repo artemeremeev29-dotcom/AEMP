@@ -1,7 +1,7 @@
 {
-  "name": "Вольт Плеер",
-  "short_name": "ВольтПлеер",
-  "description": "Музыкальный плеер в стиле AIMP 4X",
+  "name": "AEMP",
+  "short_name": "AEMP",
+  "description": "AEMP — музыкальный плеер в стиле AIMP 4X",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a1a",

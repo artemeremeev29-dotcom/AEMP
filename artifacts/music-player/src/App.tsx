@@ -36,7 +36,7 @@ function AppContent() {
           {currentTrack ? (
             `:: ${formatTime(audioState.currentTime)} :: ${currentTrack.artist} - ${currentTrack.name} :: MP3 :: 44.1 kHz, 320 kbps,`
           ) : (
-            `:: Вольт Плеер :: AIMP3 4X Skin ::`
+            `:: AEMP ::`
           )}
         </div>
         <div className="flex gap-2 text-[#888] shrink-0">
