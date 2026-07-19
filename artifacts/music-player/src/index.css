@@ -2,77 +2,148 @@
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
-:root {
+/* ── Dark theme (default) ─────────────────────────────────────────────────── */
+:root, [data-theme="dark"] {
   --background: #1a1a1a;
   --player-bg: #2a2a2a;
   --darker: #1e1e1e;
   --darkest: #141414;
-  --orange: #ff8c00;
-  --orange-hover: #ffa500;
   --text-main: #cccccc;
   --text-sec: #888888;
   --border: #3a3a3a;
+  --orange: #ff8c00;
+  --vis-bg: #141414;
+
+  /* Settings panel tokens */
+  --s-bg: #1a1a1a;
+  --s-header: #141414;
+  --s-text: #ccc;
+  --s-muted: #555;
+  --s-divider: #2a2a2a;
+  --s-track: #2e2e2e;
 }
 
-@layer base {
-  body {
-    background-color: var(--background);
+/* ── Light theme ──────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --background: #f0f0f0;
+  --player-bg: #e4e4e4;
+  --darker: #d8d8d8;
+  --darkest: #c8c8c8;
+  --text-main: #1a1a1a;
+  --text-sec: #555;
+  --border: #b8b8b8;
+  --vis-bg: #c8c8c8;
+
+  --s-bg: #ebebeb;
+  --s-header: #dadada;
+  --s-text: #1a1a1a;
+  --s-muted: #777;
+  --s-divider: #ccc;
+  --s-track: #bbb;
+}
+
+@layer base {  body {
+    background-color: var(--player-bg);
     color: var(--text-main);
     font-family: 'Segoe UI', system-ui, sans-serif;
     margin: 0;
     padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100dvh;
     overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+  width: 100vw;
+  height: 100dvh;
   }
-}
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  #root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 45.45%;
+    height: 45.45dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(2.2);
+    transform-origin: top left;
 }
-::-webkit-scrollbar-track {
-  background: var(--darker);
-  border-left: 1px solid var(--border);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 0;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--orange);
-}
+}               
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--darker); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--accent, #ff8c00); }
 
-/* EQ Slider: вертикальные слайдеры через writing-mode (стандартный способ) */
+/* ── EQ vertical sliders ──────────────────────────────────────────────────── */
 input[type=range].eq-slider {
   writing-mode: vertical-lr;
   direction: rtl;
   width: 6px;
   cursor: pointer;
-  accent-color: var(--orange);
+  accent-color: var(--accent, #ff8c00);
 }
 
-/* Horizontal sliders like volume */
+/* ── Transport volume slider ──────────────────────────────────────────────── */
 input[type=range].slider-thumb-dark {
   accent-color: #1e1e1e;
 }
 input[type=range].slider-thumb-dark::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
+  -webkit-appearance: none; appearance: none;
   background: #1e1e1e;
-  width: 8px;
-  height: 12px;
-  border-radius: 1px;
-  cursor: pointer;
+  width: 8px; height: 12px;
+  border-radius: 1px; cursor: pointer;
 }
 input[type=range].slider-thumb-dark::-moz-range-thumb {
   background: #1e1e1e;
-  width: 8px;
-  height: 12px;
-  border: none;
-  border-radius: 1px;
-  cursor: pointer;
+  width: 8px; height: 12px;
+  border: none; border-radius: 1px; cursor: pointer;
+}
+
+/* ── Vinyl record spin ────────────────────────────────────────────────────── */
+@keyframes vinyl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.vinyl-spin {
+  animation: vinyl-spin 4s linear infinite;
+}
+.vinyl-spin.paused {
+  animation-play-state: paused;
+}
+/* ── СКИНЫ ДЛЯ AEMP ──────────────────────────────────────────────────────── */
+
+/* Скин 1: Winamp / Cyberpunk (Токсично-зеленый с черным) */
+[data-skin="cyberpunk"] {
+  --player-bg: #0d0e12;
+  --darker: #161920;
+  --darkest: #08090c;
+  --text-main: #00ff66;
+  --text-sec: #00aa44;
+  --border: #00ff66;
+  --accent: #00ff66;
+  --accent-rgb: 0, 255, 102;
+}
+
+/* Скин 2: Drift Phonk / Neon (Глубокий фиолетовый с неоновым розовым) */
+[data-skin="phonk"] {
+  --player-bg: #12071f;
+  --darker: #1a0b2e;
+  --darkest: #0a0412;
+  --text-main: #e0d5f5;
+  --text-sec: #8762c4;
+  --border: #ff0055;
+  --accent: #ff0055;
+  --accent-rgb: 255, 0, 85;
+}
+
+/* Скин 3: Retro Silver (Магнитофон из 80-х, серебряный пластик) */
+[data-skin="retro-silver"] {
+  --player-bg: #cccccc;
+  --darker: #b3b3b3;
+  --darkest: #999999;
+  --text-main: #111111;
+  --text-sec: #444444;
+  --border: #666666;
+  --accent: #0055ff;
+  --accent-rgb: 0, 85, 255;
 }

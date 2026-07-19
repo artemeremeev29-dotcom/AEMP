@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 
+export type CoverStyle     = 'square' | 'vinyl' | 'blur';
+export type VisualizerStyle = 'bars' | 'circle' | 'wave';
+export type ThemeMode       = 'dark' | 'light' | 'auto';
+
 export interface Settings {
   fadeInMs: number;
   fadeOutMs: number;
@@ -8,6 +12,9 @@ export interface Settings {
   showSpectrum: boolean;
   showCoverArt: boolean;
   showStatusBar: boolean;
+  coverStyle: CoverStyle;
+  visualizerStyle: VisualizerStyle;
+  theme: ThemeMode;
 }
 
 const DEFAULTS: Settings = {
@@ -18,6 +25,9 @@ const DEFAULTS: Settings = {
   showSpectrum: true,
   showCoverArt: true,
   showStatusBar: true,
+  coverStyle: 'square',
+  visualizerStyle: 'bars',
+  theme: 'dark',
 };
 
 interface SettingsContextType {
@@ -25,9 +35,20 @@ interface SettingsContextType {
   updateSettings: (partial: Partial<Settings>) => void;
   openSettings: boolean;
   setOpenSettings: (v: boolean) => void;
+  // Sleep timer (runtime, not persisted)
+  sleepTimerEnd: number | null;
+  setSleepTimer: (minutes: number | null) => void;
+  sleepSecondsLeft: number | null;
 }
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
+
+function resolveTheme(mode: ThemeMode): 'dark' | 'light' {
+  if (mode === 'auto') {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  return mode;
+}
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
@@ -38,6 +59,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return DEFAULTS;
   });
   const [openSettings, setOpenSettings] = useState(false);
+  const [sleepTimerEnd, setSleepTimerEndState] = useState<number | null>(null);
+  const [sleepSecondsLeft, setSleepSecondsLeft] = useState<number | null>(null);
 
   const updateSettings = useCallback((partial: Partial<Settings>) => {
     setSettings(prev => {
@@ -47,7 +70,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Sync accent color to CSS variable
+  // Accent color → CSS variable
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', settings.accentColor);
     const hex = settings.accentColor.replace('#', '');
@@ -57,8 +80,48 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.style.setProperty('--accent-rgb', `${r},${g},${b}`);
   }, [settings.accentColor]);
 
+  // Theme → data-theme attribute
+  useEffect(() => {
+    const apply = () => {
+      const resolved = resolveTheme(settings.theme);
+      document.documentElement.setAttribute('data-theme', resolved);
+    };
+    apply();
+    if (settings.theme === 'auto') {
+      const mq = window.matchMedia('(prefers-color-scheme: light)');
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    }
+  }, [settings.theme]);
+
+  // Sleep timer countdown
+  const setSleepTimer = useCallback((minutes: number | null) => {
+    if (minutes === null) {
+      setSleepTimerEndState(null);
+      setSleepSecondsLeft(null);
+    } else {
+      setSleepTimerEndState(Date.now() + minutes * 60 * 1000);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!sleepTimerEnd) { setSleepSecondsLeft(null); return; }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((sleepTimerEnd - Date.now()) / 1000));
+      setSleepSecondsLeft(left);
+      if (left === 0) setSleepTimerEndState(null);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sleepTimerEnd]);
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, openSettings, setOpenSettings }}>
+    <SettingsContext.Provider value={{
+      settings, updateSettings,
+      openSettings, setOpenSettings,
+      sleepTimerEnd, setSleepTimer, sleepSecondsLeft,
+    }}>
       {children}
     </SettingsContext.Provider>
   );
