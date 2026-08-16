@@ -57,15 +57,17 @@
 
   #root {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 45.45%;
-    height: 45.45dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transform: scale(2.2);
-    transform-origin: top left;
+  top: 0;
+  left: 0;
+  --zoom: 1.5; /* Твой масштаб. Если 1.5 покажется мелковатым, поставь 1.8 или обратно 2.2 */
+  
+  width: calc(100% / var(--zoom));
+  height: calc(100dvh / var(--zoom));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(var(--zoom));
+  transform-origin: top left;
 }
 }               
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */

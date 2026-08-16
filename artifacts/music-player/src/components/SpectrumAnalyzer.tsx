@@ -128,7 +128,7 @@ export function SpectrumAnalyzer() {
 
   return (
     <div ref={containerRef} className="w-full h-full absolute inset-0" style={{ backgroundColor: 'var(--vis-bg, #141414)' }}>
-      <canvas ref={canvasRef} className="w-full h-full block" />
+      <canvas ref={canvasRef} className="w-full h-full block ml-[0px] mr-[0px] mt-[0px] mb-[0px]" />
     </div>
   );
 }
