@@ -24,12 +24,12 @@ jobs:
           node-version: 22
 
       - name: Install dependencies & Build Capacitor Project
+        env:
+          PORT: 3000
         run: |
           cd artifacts/music-player
           pnpm install --no-frozen-lockfile
-          pnpm run build || true
-          npx cap add android || true
-          npx cap copy android
+          PORT=3000 pnpm run build
           npx cap sync android
 
       - name: Set up JDK 17
