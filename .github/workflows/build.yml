@@ -1,4 +1,3 @@
-
 name: Build Android APK
 
 on:
@@ -24,11 +23,14 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies & Sync Capacitor
+      - name: Install dependencies & Build Capacitor Project
         run: |
           cd artifacts/music-player
           pnpm install --no-frozen-lockfile
-          npx cap sync android || true
+          pnpm run build || true
+          npx cap add android || true
+          npx cap copy android
+          npx cap sync android
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
