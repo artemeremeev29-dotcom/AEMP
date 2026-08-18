@@ -13,15 +13,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'artifacts/music-player/pnpm-lock.yaml'
 
       - name: Install dependencies & Sync Capacitor
         run: |
           cd artifacts/music-player
-          npm install
+          pnpm install --no-frozen-lockfile
           npx cap sync android || true
 
       - name: Set up JDK 17
