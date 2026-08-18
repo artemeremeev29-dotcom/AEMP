@@ -22,11 +22,11 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
 
   return (
     <div
-      className="h-[40px] shrink-0 flex items-center px-4 gap-4 text-[#1e1e1e]"
+      className="aemp-transport h-[40px] shrink-0 flex items-center px-4 gap-4 text-[#1e1e1e]"
       style={{ backgroundColor: 'var(--accent)' }}
     >
       {/* Transport */}
-      <div className="flex items-center gap-1">
+      <div className="aemp-transport-buttons flex items-center gap-1">
         <button onClick={actions.playPrev} className="p-1.5 hover:bg-black/15 rounded-sm transition-colors" title="Предыдущий">
           <SkipBack size={18} className="fill-current" />
         </button>
@@ -42,7 +42,7 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
       </div>
 
       {/* Volume */}
-      <div className="flex items-center gap-2 w-[120px] ml-4">
+      <div className="aemp-transport-volume flex items-center gap-2 w-[120px] ml-4">
         <button onClick={audioActions.toggleMute} className="p-1 hover:bg-black/15 rounded-sm">
           {audioState.isMuted || audioState.volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>

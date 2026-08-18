@@ -41,12 +41,12 @@ function AppContent() {
     <div
       data-skin={currentSkin}
       
-      className="w-full flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.6)] overflow-hidden h-full relative"
+      className="aemp-shell w-full flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.6)] overflow-hidden h-full relative"
       style={{ backgroundColor: 'var(--player-bg)' }}
     >
       {/* ── Status bar ─────────────────────────────────────────────────── */}
       {settings.showStatusBar && (
-        <div className="h-[28px] shrink-0 flex justify-between items-center px-2 border-b text-[11px] font-mono select-none"
+        <div className="aemp-status-bar h-[28px] shrink-0 flex justify-between items-center px-2 border-b text-[11px] font-mono select-none"
           style={{ backgroundColor: 'var(--darker)', borderColor: 'var(--border)', color: 'var(--text-sec)' }}>
           <div className="truncate pr-4">
             {sleepSecondsLeft !== null
@@ -55,7 +55,7 @@ function AppContent() {
                 ? `:: ${formatTime(audioState.currentTime)} :: ${currentTrack.artist} — ${currentTrack.name} ::`
                 : ':: AEMP ::'}
           </div>
-                    <div className="flex gap-2 items-center shrink-0" style={{ color: 'var(--text-sec)' }}>
+          <div className="aemp-window-controls flex gap-2 items-center shrink-0" style={{ color: 'var(--text-sec)' }}>
             <select 
               value={currentSkin} 
               onChange={(e) => setCurrentSkin(e.target.value as any)}
@@ -76,7 +76,7 @@ function AppContent() {
       )}
 
       {/* ── Player body ────────────────────────────────────────────────── */}
-      <div className="h-[120px] shrink-0 flex flex-col relative" style={{ backgroundColor: 'var(--player-bg)' }}>
+      <div className="aemp-player-body h-[120px] shrink-0 flex flex-col relative" style={{ backgroundColor: 'var(--player-bg)' }}>
 
         {/* Blur background (cover style = blur) */}
         {hasCover && coverStyle === 'blur' && (
@@ -88,7 +88,7 @@ function AppContent() {
 
         <div className="flex flex-1 min-h-0 relative z-10">
           {/* Left: controls + cover */}
-          <div className="w-[170px] flex flex-col border-r shrink-0" style={{ borderColor: 'var(--border)' }}>
+          <div className="aemp-cover-column w-[170px] flex flex-col border-r shrink-0" style={{ borderColor: 'var(--border)' }}>
             <div className="h-[24px] border-b flex items-center justify-around px-2"
               style={{ backgroundColor: 'var(--player-bg)', borderColor: 'var(--border)' }}>
               <button onClick={actions.toggleShuffle} className="p-1 transition-colors"
@@ -125,7 +125,7 @@ function AppContent() {
           </div>
 
           {/* Right: timer + spectrum */}
-          <div className="flex-1 flex flex-col min-w-0 py-2 pr-2 pl-1 gap-1">
+          <div className="aemp-display-column flex-1 flex flex-col min-w-0 py-2 pr-2 pl-1 gap-1">
             <div className="flex flex-col items-end shrink-0">
               <div className="text-3xl font-bold leading-none"
                 style={{ color: 'var(--accent)', fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums',
@@ -166,7 +166,7 @@ function AppContent() {
       <TransportControls onToggleEQ={() => setShowEQ(!showEQ)} isEQActive={showEQ} />
 
       {/* ── Playlist + overlays ────────────────────────────────────────── */}
-      <div className="flex-1 relative min-h-0">
+      <div className="aemp-playlist-area flex-1 relative min-h-0">
         <Playlist />
 
         {/* EQ overlay */}
@@ -207,9 +207,10 @@ function AppContent() {
           )}
         </AnimatePresence>
 
-        {/* Settings panel */}
-        <Settings />
       </div>
+
+      {/* Settings panel covers the complete player, including the header. */}
+      <Settings />
     </div>
   );
 }

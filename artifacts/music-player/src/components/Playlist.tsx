@@ -108,9 +108,9 @@ export function Playlist() {
   const totalMb = playlist.reduce((a, t) => a + t.file.size, 0) / (1024 * 1024);
 
   return (
-    <div className="flex flex-col h-full bg-[#222] select-none">
+    <div className="aemp-playlist flex flex-col h-full bg-[#222] select-none">
       {/* Playlist header */}
-      <div className="h-[30px] shrink-0 bg-[#1e1e1e] border-b border-[#333] flex items-center px-2 gap-2">
+      <div className="aemp-playlist-header h-[30px] shrink-0 bg-[#1e1e1e] border-b border-[#333] flex items-center px-2 gap-2">
         <button className="text-[#666] hover:text-[#ccc] transition-colors"><MoreVertical size={13} /></button>
         <button className="text-[#666] hover:text-[#ccc] transition-colors"><ChevronLeft size={13} /></button>
         <span className="flex-1 text-center text-[11px] text-[#999] truncate">ПО УМОЛЧАНИЮ</span>
@@ -121,7 +121,7 @@ export function Playlist() {
       </div>
 
       {/* Stats */}
-      <div className="h-[24px] shrink-0 bg-[#1e1e1e] border-b border-[#2a2a2a] flex items-center px-3 justify-between">
+      <div className="aemp-playlist-stats h-[24px] shrink-0 bg-[#1e1e1e] border-b border-[#2a2a2a] flex items-center px-3 justify-between">
         <span className="text-[10px] text-[#666] font-mono">
           {formatDuration(totalDuration)} | {playlist.length} {playlist.length === 1 ? 'трек' : playlist.length < 5 ? 'трека' : 'треков'} | ~{totalMb.toFixed(1)} МБ
         </span>
@@ -137,7 +137,7 @@ export function Playlist() {
         onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
       >
         {playlist.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center opacity-50 p-8 text-center text-[#888]">
+        <div className="h-full flex flex-col items-center justify-center opacity-50 p-8 text-center text-[#888]">
             <p>Перетащите аудиофайлы сюда или нажмите "+" внизу</p>
           </div>
         ) : (
@@ -149,7 +149,7 @@ export function Playlist() {
                 <div
                   key={track.id}
                   onClick={() => actions.playTrack(track.id)}
-                  className={`flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] ${bgClass}`}
+                  className={`aemp-track-row flex items-center h-[24px] px-2 cursor-pointer hover:bg-[#2f2f2f] ${bgClass}`}
                 >
                   <div className="w-5 flex justify-center shrink-0">
                     {isActive
@@ -186,7 +186,7 @@ export function Playlist() {
       </div>
 
       {/* Bottom toolbar */}
-      <div className="h-[30px] shrink-0 bg-[#1a1a1a] border-t border-[#333] flex items-center px-2 gap-1">
+      <div className="aemp-playlist-toolbar h-[30px] shrink-0 bg-[#1a1a1a] border-t border-[#333] flex items-center px-2 gap-1">
         <button onClick={() => fileInputRef.current?.click()} className="text-[#666] hover:text-[#ccc] p-1 transition-colors" title="Добавить файлы">
           <Plus size={14} />
         </button>
@@ -199,7 +199,7 @@ export function Playlist() {
         <button onClick={() => { const i = playlist.findIndex(t => t.id === currentTrackId); if (i >= 0 && i < playlist.length - 1) actions.reorderPlaylist(i, i + 1); }} className="text-[#666] hover:text-[#ccc] p-1 transition-colors">
           <ArrowDown size={14} />
         </button>
-        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><LayoutGrid size={14} /></button>
+        <button className="aemp-optional-tool text-[#666] hover:text-[#ccc] p-1 transition-colors"><LayoutGrid size={14} /></button>
         <div className="flex-1 flex items-center gap-1 mx-1">
           <Search size={11} className="text-[#444]" />
           <input
@@ -207,8 +207,8 @@ export function Playlist() {
             className="flex-1 bg-transparent text-[10px] text-[#666] placeholder-[#444] outline-none"
           />
         </div>
-        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><ChevronsRight size={14} /></button>
-        <button className="text-[#666] hover:text-[#ccc] p-1 transition-colors"><FileText size={14} /></button>
+        <button className="aemp-optional-tool text-[#666] hover:text-[#ccc] p-1 transition-colors"><ChevronsRight size={14} /></button>
+        <button className="aemp-optional-tool text-[#666] hover:text-[#ccc] p-1 transition-colors"><FileText size={14} /></button>
       </div>
 
       <input ref={fileInputRef} type="file" multiple accept="audio/*" className="hidden" onChange={onFileInput} />

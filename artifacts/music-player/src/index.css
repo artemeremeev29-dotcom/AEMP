@@ -42,34 +42,43 @@
   --s-track: #bbb;
 }
 
-@layer base {  body {
-    background-color: var(--player-bg);
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Desktop window size. The phone rule below intentionally overrides this. */
+.aemp-shell {
+  width: min(100%, 520px);
+  height: min(90dvh, 800px);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
     color: var(--text-main);
     font-family: 'Segoe UI', system-ui, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100dvh;
+    height: 100dvh;
     overflow: hidden;
     transition: background-color 0.3s, color 0.3s;
-  width: 100vw;
-  height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   #root {
-    position: fixed;
-  top: 0;
-  left: 0;
-  --zoom: 1.5; /* Твой масштаб. Если 1.5 покажется мелковатым, поставь 1.8 или обратно 2.2 */
-  
-  width: calc(100% / var(--zoom));
-  height: calc(100dvh / var(--zoom));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: scale(var(--zoom));
-  transform-origin: top left;
+    width: min(100%, 520px);
+    height: min(90dvh, 800px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 }
-}               
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--darker); }
@@ -111,6 +120,199 @@ input[type=range].slider-thumb-dark::-moz-range-thumb {
 }
 .vinyl-spin.paused {
   animation-play-state: paused;
+}
+
+/* ── APK / phone layout ──────────────────────────────────────────────────── */
+/*
+ * Do not use transform: scale() here. Capacitor and mobile browsers calculate
+ * touch coordinates against the unscaled viewport, which makes controls
+ * appear offset and makes the playlist hard to tap.
+ */
+@media (max-width: 599px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  body {
+    display: block;
+    min-height: 100svh;
+    height: 100svh;
+  }
+
+  #root {
+    width: 100%;
+    height: 100svh;
+    min-height: 0;
+    max-height: none;
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+
+  .aemp-shell {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .aemp-status-bar {
+    height: 30px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+  }
+
+  .aemp-window-controls {
+    gap: 6px;
+  }
+
+  .aemp-window-controls select {
+    max-width: 94px;
+    min-width: 0;
+  }
+
+  .aemp-player-body {
+    height: 126px;
+  }
+
+  .aemp-cover-column {
+    width: clamp(136px, 42vw, 170px);
+  }
+
+  .aemp-display-column {
+    padding-top: 7px;
+    padding-right: 6px;
+    padding-left: 5px;
+  }
+
+  .aemp-display-column .text-3xl {
+    font-size: 2rem;
+  }
+
+  .aemp-transport {
+    height: 48px;
+    padding-left: 6px;
+    padding-right: 6px;
+    gap: 5px;
+  }
+
+  .aemp-transport-buttons {
+    gap: 0;
+  }
+
+  .aemp-transport-buttons button {
+    padding: 7px 5px;
+    min-width: 29px;
+  }
+
+  .aemp-transport-volume {
+    width: clamp(70px, 24vw, 108px);
+    margin-left: 2px;
+    gap: 5px;
+  }
+
+  .aemp-transport-volume input {
+    min-width: 0;
+  }
+
+  .aemp-transport > .flex-1 {
+    min-width: 0;
+  }
+
+  .aemp-transport > button {
+    flex-shrink: 0;
+  }
+
+  .aemp-playlist-header {
+    height: 34px;
+  }
+
+  .aemp-playlist-stats {
+    height: 26px;
+  }
+
+  .aemp-track-row {
+    height: 34px;
+    min-height: 34px;
+    padding-left: 8px;
+    padding-right: 8px;
+    touch-action: manipulation;
+  }
+
+  .aemp-track-row img,
+  .aemp-track-row > div:nth-child(2) {
+    width: 22px;
+    height: 22px;
+  }
+
+  .aemp-playlist-toolbar {
+    height: 42px;
+  }
+
+  .aemp-playlist-toolbar button {
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  .aemp-playlist .aemp-optional-tool {
+    display: none;
+  }
+
+  .aemp-playlist input[placeholder="Быстрый поиск..."] {
+    min-width: 0;
+  }
+
+  .aemp-playlist-area > .absolute[style*="height: 140px"] {
+    height: min(140px, 38vh) !important;
+  }
+}
+
+/* Very narrow Android phones: keep all transport controls on one row. */
+@media (max-width: 360px) {
+  .aemp-cover-column {
+    width: 132px;
+  }
+
+  .aemp-transport {
+    gap: 2px;
+  }
+
+  .aemp-transport-buttons button {
+    min-width: 26px;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .aemp-transport-volume {
+    width: 66px;
+    gap: 3px;
+  }
+
+  .aemp-transport-volume svg {
+    width: 14px;
+  }
+
+  .aemp-transport > button {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+/* On a real desktop retain the compact player window, while the APK fills
+ * the screen through the mobile rule above. */
+@media (min-width: 600px) {
+  .aemp-shell {
+    border-radius: 2px;
+  }
 }
 /* ── СКИНЫ ДЛЯ AEMP ──────────────────────────────────────────────────────── */
 
