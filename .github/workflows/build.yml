@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -26,10 +27,11 @@ jobs:
       - name: Install dependencies & Build Capacitor Project
         env:
           PORT: 3000
+          BASE_PATH: '/'
         run: |
           cd artifacts/music-player
           pnpm install --no-frozen-lockfile
-          PORT=3000 pnpm run build
+          PORT=3000 BASE_PATH='/' pnpm run build
           npx cap sync android
 
       - name: Set up JDK 17
