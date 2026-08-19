@@ -92,6 +92,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       mq.addEventListener('change', apply);
       return () => mq.removeEventListener('change', apply);
     }
+    return undefined;
   }, [settings.theme]);
 
   // Sleep timer countdown

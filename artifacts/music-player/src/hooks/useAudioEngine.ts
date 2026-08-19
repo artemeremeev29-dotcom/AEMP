@@ -273,6 +273,27 @@ export function useAudioEngine() {
     }
   }, [tickProgress]);
 
+  // ─── Stop ─────────────────────────────────────────────────────────────────────
+  // Unlike pause, stop always returns the current track to its beginning.
+  const stop = useCallback(() => {
+    const audio = audioElRef.current;
+    cancelAnimationFrame(rafRef.current);
+    if (audio) {
+      audio.pause();
+      try { audio.currentTime = 0; } catch (_) {}
+    }
+    setCurrentTime(0);
+    setIsPlaying(false);
+    if (gainNodeRef.current && audioCtxRef.current) {
+      const now = audioCtxRef.current.currentTime;
+      gainNodeRef.current.gain.cancelScheduledValues(now);
+      gainNodeRef.current.gain.setValueAtTime(
+        isMutedRef.current ? 0 : volumeRef.current,
+        now
+      );
+    }
+  }, []);
+
   // ─── Seek ────────────────────────────────────────────────────────────────────
   const seek = useCallback((time: number) => {
     const audio = audioElRef.current;
@@ -340,6 +361,7 @@ export function useAudioEngine() {
     actions: {
       loadFile,
       togglePlayPause,
+      stop,
       seek,
       setVolume: setVolumeValue,
       toggleMute,

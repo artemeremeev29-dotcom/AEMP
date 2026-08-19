@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { SpectrumAnalyzer } from './components/SpectrumAnalyzer';
@@ -7,7 +7,7 @@ import { Playlist } from './components/Playlist';
 import { TransportControls } from './components/TransportControls';
 import { Settings } from './components/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Repeat, Shuffle, Repeat1, Copy, Activity, Minus, Square, X } from 'lucide-react';
+import { Repeat, Shuffle, Repeat1, Copy, Activity, Minus, Square, X, ImagePlus, Trash2 } from 'lucide-react';
 
 function formatTime(s: number) {
   if (isNaN(s) || !isFinite(s)) return '00:00';
@@ -18,12 +18,92 @@ function formatTime(s: number) {
 function AppContent() {
   const [showEQ, setShowEQ] = useState(false);
   const [currentSkin, setCurrentSkin] = useState<'default' | 'cyberpunk' | 'phonk' | 'retro-silver'>('default');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [abStart, setAbStart] = useState<number | null>(null);
+  const [abEnd, setAbEnd] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const { audioState, audioActions, playlist, currentTrackId, isShuffle, repeatMode, actions, bookmarkResume } = usePlayer();
-  const { settings, sleepSecondsLeft } = useSettings();
+  const { settings, sleepSecondsLeft, updateSettings } = useSettings();
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   const currentTrack = playlist.find(t => t.id === currentTrackId);
+
+  useEffect(() => {
+    if (abStart === null || abEnd === null || abEnd <= abStart) return;
+    if (audioState.currentTime >= abEnd) audioActions.seek(abStart);
+  }, [audioState.currentTime, abStart, abEnd, audioActions]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const handleAB = () => {
+    if (audioState.duration <= 0) {
+      setToast('Сначала запусти трек');
+    } else if (abStart === null) {
+      setAbStart(audioState.currentTime);
+      setToast('Точка A установлена');
+    } else if (abEnd === null && audioState.currentTime > abStart) {
+      setAbEnd(audioState.currentTime);
+      setToast('Повтор A–B включён');
+    } else {
+      setAbStart(null);
+      setAbEnd(null);
+      setToast('Повтор A–B выключен');
+    }
+  };
+
+  const copyTrackInfo = async () => {
+    if (!currentTrack) {
+      setToast('Нет активного трека');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(
+        `${currentTrack.artist} — ${currentTrack.name}\n${formatTime(currentTrack.duration)}`
+      );
+      setToast('Информация скопирована');
+    } catch (_) {
+      setToast('Копирование недоступно');
+    }
+  };
+
+  const chooseCover = () => {
+    if (!currentTrack) {
+      setToast('Сначала выберите трек');
+      return;
+    }
+    coverInputRef.current?.click();
+  };
+
+  const onCoverSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !currentTrackId) return;
+    if (!file.type.startsWith('image/')) {
+      setToast('Выберите файл изображения');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        actions.setTrackCover(currentTrackId, reader.result);
+        setToast('Обложка установлена');
+      }
+    };
+    reader.onerror = () => setToast('Не удалось открыть изображение');
+    reader.readAsDataURL(file);
+  };
+
+  const resetCover = () => {
+    if (!currentTrackId || !currentTrack?.coverArt) return;
+    actions.setTrackCover(currentTrackId, undefined);
+    setToast('Обложка сброшена');
+  };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressBarRef.current || audioState.duration === 0) return;
@@ -42,6 +122,7 @@ function AppContent() {
       data-skin={currentSkin}
       
       className="aemp-shell w-full flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.6)] overflow-hidden h-full relative"
+      data-fullscreen={isFullscreen ? 'true' : 'false'}
       style={{ backgroundColor: 'var(--player-bg)' }}
     >
       {/* ── Status bar ─────────────────────────────────────────────────── */}
@@ -67,9 +148,21 @@ function AppContent() {
               <option value="retro-silver">Ретро Серебро</option>
             </select>
 
-            <Minus size={12} className="cursor-pointer hover:text-white" />
-            <Square size={10} className="cursor-pointer hover:text-white mt-[1px]" />
-            <X size={12} className="cursor-pointer" style={{ color: 'inherit' }} />
+            <button
+              onClick={() => setIsFullscreen(value => !value)}
+              className="hover:text-white"
+              title={isFullscreen ? 'Восстановить размер' : 'Развернуть'}
+            ><Minus size={12} /></button>
+            <button
+              onClick={() => setIsFullscreen(value => !value)}
+              className="hover:text-white mt-[1px]"
+              title={isFullscreen ? 'Восстановить размер' : 'Развернуть'}
+            ><Square size={10} /></button>
+            <button
+              onClick={() => { audioActions.stop(); setToast('Воспроизведение остановлено'); }}
+              className="hover:text-[var(--accent)]"
+              title="Остановить воспроизведение"
+            ><X size={12} /></button>
           </div>
 
         </div>
@@ -97,9 +190,24 @@ function AppContent() {
                 style={{ color: repeatMode !== 'off' ? 'var(--accent)' : 'var(--text-sec)' }} title="Повтор">
                 {repeatMode === 'one' ? <Repeat1 size={12}/> : <Repeat size={12}/>}
               </button>
-              <button className="p-1 text-[10px] font-bold transition-colors" style={{ color: 'var(--text-sec)' }}>A-B</button>
-              <button className="p-1 transition-colors" style={{ color: 'var(--text-sec)' }}><Activity size={12}/></button>
-              <button className="p-1 transition-colors" style={{ color: 'var(--text-sec)' }}><Copy size={12}/></button>
+              <button
+                onClick={handleAB}
+                className="p-1 text-[10px] font-bold transition-colors"
+                style={{ color: abStart !== null ? 'var(--accent)' : 'var(--text-sec)' }}
+                title={abEnd !== null ? 'Сбросить повтор A–B' : abStart !== null ? 'Установить точку B' : 'Установить точку A'}
+              >A-B</button>
+              <button
+                onClick={() => updateSettings({ showSpectrum: !settings.showSpectrum })}
+                className="p-1 transition-colors"
+                style={{ color: settings.showSpectrum ? 'var(--accent)' : 'var(--text-sec)' }}
+                title={settings.showSpectrum ? 'Скрыть спектр' : 'Показать спектр'}
+              ><Activity size={12}/></button>
+              <button
+                onClick={copyTrackInfo}
+                className="p-1 transition-colors"
+                style={{ color: 'var(--text-sec)' }}
+                title="Скопировать информацию о треке"
+              ><Copy size={12}/></button>
             </div>
 
             {/* Cover art */}
@@ -117,10 +225,34 @@ function AppContent() {
               ) : hasCover ? (
                 <img src={currentTrack!.coverArt} className="w-full h-full object-cover" alt="Обложка" />
               ) : (
-                <div style={{ width: 0, height: 0,
-                  borderLeft: '20px solid transparent', borderRight: '20px solid transparent',
-                  borderBottom: `34px solid var(--accent)`, opacity: 0.7 }} />
+                <div className="flex flex-col items-center gap-2">
+                  <div style={{ width: 0, height: 0,
+                    borderLeft: '20px solid transparent', borderRight: '20px solid transparent',
+                    borderBottom: `34px solid var(--accent)`, opacity: 0.7 }} />
+                  <span className="text-[9px]" style={{ color: 'var(--text-sec)' }}>НЕТ ОБЛОЖКИ</span>
+                </div>
               )}
+              <div className="absolute bottom-1 left-1 right-1 flex justify-center gap-1">
+                <button
+                  onClick={chooseCover}
+                  disabled={!currentTrack}
+                  className="flex items-center gap-1 px-1.5 py-1 text-[9px] rounded-sm border backdrop-blur-sm transition-colors disabled:opacity-40"
+                  style={{ color: 'var(--text-main)', borderColor: 'var(--border)', backgroundColor: 'rgba(0,0,0,0.55)' }}
+                  title="Выбрать обложку"
+                >
+                  <ImagePlus size={11} /> Обложка
+                </button>
+                {currentTrack?.coverArt && (
+                  <button
+                    onClick={resetCover}
+                    className="p-1 rounded-sm border backdrop-blur-sm transition-colors hover:text-red-300"
+                    style={{ color: 'var(--text-main)', borderColor: 'var(--border)', backgroundColor: 'rgba(0,0,0,0.55)' }}
+                    title="Сбросить обложку к ID3"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -211,6 +343,13 @@ function AppContent() {
 
       {/* Settings panel covers the complete player, including the header. */}
       <Settings />
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onCoverSelected}
+      />
     </div>
   );
 }

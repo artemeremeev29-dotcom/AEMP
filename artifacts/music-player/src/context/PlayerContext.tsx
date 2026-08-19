@@ -9,6 +9,7 @@ export interface Track {
   artist: string;
   duration: number;
   coverArt?: string;
+  embeddedCoverArt?: string;
 }
 
 interface PlayerContextType {
@@ -19,9 +20,11 @@ interface PlayerContextType {
   isShuffle: boolean;
   repeatMode: 'off' | 'all' | 'one';
   bookmarkResume: { track: Track; time: number } | null;
+  queueIds: string[];
   actions: {
     addTracks: (tracks: Track[]) => void;
     removeTrack: (id: string) => void;
+    setTrackCover: (id: string, coverArt: string | undefined) => void;
     playTrack: (id: string) => void;
     playNext: () => void;
     playPrev: () => void;
@@ -29,6 +32,9 @@ interface PlayerContextType {
     toggleRepeat: () => void;
     reorderPlaylist: (from: number, to: number) => void;
     queueNext: (id: string) => void;
+    removeFromQueue: (id: string) => void;
+    clearQueue: () => void;
+    clearPlaylist: () => void;
     confirmResume: () => void;
     dismissResume: () => void;
   };
@@ -55,6 +61,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
   const [isShuffle, setIsShuffle]         = useState(false);
   const [repeatMode, setRepeatMode]       = useState<'off' | 'all' | 'one'>('off');
+  const [queueIds, setQueueIds]           = useState<string[]>([]);
   const [bookmarkResume, setBookmarkResume] = useState<{ track: Track; time: number } | null>(null);
 
   const currentTrackRef = useRef<Track | null>(null);
@@ -115,6 +122,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playNext = useCallback(() => {
     if (playlist.length === 0) return;
     if (repeatMode === 'one' && currentTrackId) { playTrack(currentTrackId); return; }
+
+    const queuedId = queueIds.find(id => playlist.some(track => track.id === id));
+    if (queuedId) {
+      setQueueIds(prev => {
+        const next = prev.filter(id => id !== queuedId && playlist.some(track => track.id === id));
+        return next;
+      });
+      playTrack(queuedId);
+      return;
+    }
+    if (queueIds.length > 0) setQueueIds([]);
+
     let next = 0;
     if (isShuffle) {
       next = Math.floor(Math.random() * playlist.length);
@@ -126,7 +145,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
     playTrack(playlist[next].id);
-  }, [playlist, currentTrackId, isShuffle, repeatMode, playTrack]);
+  }, [playlist, currentTrackId, isShuffle, repeatMode, queueIds, playTrack]);
 
   const playPrev = useCallback(() => {
     if (playlist.length === 0) return;
@@ -141,16 +160,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [audioActions, playNext]);
 
   const value: PlayerContextType = {
-    audioState, audioActions, playlist, currentTrackId, isShuffle, repeatMode, bookmarkResume,
+    audioState, audioActions, playlist, currentTrackId, isShuffle, repeatMode, bookmarkResume, queueIds,
     actions: {
       addTracks: (newTracks) => setPlaylist(prev => [...prev, ...newTracks]),
       removeTrack: (id) => {
         setPlaylist(prev => prev.filter(t => t.id !== id));
+        setQueueIds(prev => prev.filter(queueId => queueId !== id));
         if (currentTrackId === id) {
-          if (audioState.isPlaying) audioActions.togglePlayPause();
+          audioActions.stop();
           setCurrentTrackId(null);
           currentTrackRef.current = null;
         }
+      },
+      setTrackCover: (id, coverArt) => {
+        setPlaylist(prev => prev.map(track => track.id === id
+          ? { ...track, coverArt: coverArt ?? track.embeddedCoverArt }
+          : track));
       },
       playTrack,
       playNext,
@@ -163,15 +188,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         });
       },
       queueNext: (id) => {
-        setPlaylist(prev => {
-          const idx = prev.findIndex(t => t.id === currentTrackId);
-          const arr = prev.filter(t => t.id !== id);
-          const target = prev.find(t => t.id === id);
-          if (!target) return prev;
-          const insertAt = idx >= 0 ? idx + 1 : 0;
-          arr.splice(insertAt, 0, target);
-          return arr;
-        });
+        if (!playlist.some(track => track.id === id) || id === currentTrackId) return;
+        setQueueIds(prev => [...prev.filter(queueId => queueId !== id), id]);
+      },
+      removeFromQueue: (id) => {
+        setQueueIds(prev => prev.filter(queueId => queueId !== id));
+      },
+      clearQueue: () => {
+        setQueueIds([]);
+      },
+      clearPlaylist: () => {
+        audioActions.stop();
+        setPlaylist([]);
+        setQueueIds([]);
+        setCurrentTrackId(null);
+        currentTrackRef.current = null;
       },
       confirmResume: () => {
         if (bookmarkResume) {

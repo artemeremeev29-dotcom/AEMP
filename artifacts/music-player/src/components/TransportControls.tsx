@@ -8,8 +8,7 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
   const { setOpenSettings } = useSettings();
 
   const handleStop = () => {
-    if (audioState.isPlaying) audioActions.togglePlayPause();
-    audioActions.seek(0);
+    audioActions.stop();
   };
 
   const handlePlayPause = () => {
