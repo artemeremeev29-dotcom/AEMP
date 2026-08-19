@@ -86,7 +86,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
     try {
       const saved = localStorage.getItem('aemp-settings');
-      if (saved) return { ...DEFAULTS, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULTS,
+          ...parsed,
+          customSkin: { ...DEFAULTS.customSkin, ...(parsed.customSkin || {}) },
+        };
+      }
     } catch (_) {}
     return DEFAULTS;
   });

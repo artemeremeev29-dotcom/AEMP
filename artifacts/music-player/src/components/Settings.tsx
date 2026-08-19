@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Moon, Sun, Smartphone, AlignJustify, Circle, Activity, Square, Disc, Layers } from 'lucide-react';
+import { X, Moon, Sun, Smartphone, AlignJustify, Circle, Activity, Square, Disc, Layers, Save, RotateCcw, Upload, GripVertical } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
-import type { CoverStyle, VisualizerStyle, ThemeMode } from '../context/SettingsContext';
+import type { CoverStyle, VisualizerStyle, ThemeMode, CustomSkin } from '../context/SettingsContext';
 
 const PRESET_COLORS = ['#ff8c00','#ff4444','#ff44aa','#aa44ff','#4488ff','#44ccff','#44dd88','#cccc00'];
 const SLEEP_OPTIONS = [15, 30, 45, 60, 90];
@@ -66,10 +66,11 @@ function OptionChip<T extends string>({ value, current, label, icon, onChange }:
   );
 }
 
-type Tab = 'playback' | 'appearance' | 'interface';
+type Tab = 'playback' | 'appearance' | 'skin' | 'interface';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'playback', label: 'ВОСПРОИЗВ.' },
   { id: 'appearance', label: 'ВИД' },
+  { id: 'skin', label: 'СКИН' },
   { id: 'interface', label: 'ИНТЕРФЕЙС' },
 ];
 
@@ -81,6 +82,62 @@ function formatSeconds(s: number): string {
 export function Settings() {
   const { settings, updateSettings, openSettings, setOpenSettings, sleepSecondsLeft, setSleepTimer } = useSettings();
   const [tab, setTab] = useState<Tab>('playback');
+  const [customDraft, setCustomDraft] = useState<CustomSkin>(settings.customSkin);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const dragTarget = useRef<'logo' | 'title' | null>(null);
+
+  useEffect(() => {
+    if (openSettings) setCustomDraft(settings.customSkin);
+  }, [openSettings, settings.customSkin]);
+
+  const updateDraft = (partial: Partial<CustomSkin>) => {
+    setCustomDraft(prev => ({ ...prev, ...partial }));
+  };
+
+  const beginDrag = (target: 'logo' | 'title', event: React.PointerEvent<HTMLDivElement>) => {
+    dragTarget.current = target;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveDraggedItem = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragTarget.current || !stageRef.current) return;
+    const rect = stageRef.current.getBoundingClientRect();
+    const x = Math.max(5, Math.min(95, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(7, Math.min(93, ((event.clientY - rect.top) / rect.height) * 100));
+    updateDraft(dragTarget.current === 'logo' ? { logoX: x, logoY: y } : { titleX: x, titleY: y });
+  };
+
+  const readTexture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+        updateDraft({ textureDataUrl: canvas.toDataURL('image/jpeg', 0.78) });
+      };
+      if (typeof reader.result === 'string') image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveCustomSkin = () => {
+    const saved = { ...customDraft, enabled: true };
+    setCustomDraft(saved);
+    updateSettings({ customSkin: saved, accentColor: saved.accentColor });
+  };
+
+  const resetCustomSkin = () => {
+    const reset = { ...customDraft, enabled: false, textureDataUrl: '' };
+    setCustomDraft(reset);
+    updateSettings({ customSkin: reset });
+  };
 
   return (
     <AnimatePresence>
@@ -206,6 +263,116 @@ export function Settings() {
                       <div className="h-full w-2/3" style={{ backgroundColor: 'var(--accent)' }} />
                     </div>
                   </div>
+                </div>
+              </>)}
+
+              {/* ── CUSTOM SKIN ───────────────────────────────────────── */}
+              {tab === 'skin' && (<>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--s-muted)' }}>Редактор скина AEMP</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--s-muted)' }}>Перетаскивайте AE и заголовок прямо в макете.</p>
+                  </div>
+                  <span className="text-[9px] px-2 py-1 rounded border" style={{
+                    color: customDraft.enabled ? 'var(--accent)' : 'var(--s-muted)',
+                    borderColor: customDraft.enabled ? 'var(--accent)' : 'var(--s-track)',
+                  }}>{customDraft.enabled ? 'АКТИВЕН' : 'ЧЕРНОВИК'}</span>
+                </div>
+
+                <input
+                  value={customDraft.name}
+                  onChange={e => updateDraft({ name: e.target.value })}
+                  className="w-full px-2 py-2 rounded border bg-transparent text-[11px] outline-none"
+                  style={{ color: 'var(--s-text)', borderColor: 'var(--s-track)' }}
+                  placeholder="Название скина"
+                />
+
+                <div
+                  ref={stageRef}
+                  className="aemp-skin-editor-stage"
+                  style={{
+                    backgroundColor: customDraft.backgroundColor,
+                    backgroundImage: customDraft.textureDataUrl ? `url(${customDraft.textureDataUrl})` : undefined,
+                    backgroundSize: 'cover',
+                  }}
+                  onPointerMove={moveDraggedItem}
+                  onPointerUp={() => { dragTarget.current = null; }}
+                  onPointerCancel={() => { dragTarget.current = null; }}
+                >
+                  <div
+                    className="aemp-skin-editor-item px-2 py-1 rounded border-2 text-3xl"
+                    style={{
+                      left: `${customDraft.logoX}%`,
+                      top: `${customDraft.logoY}%`,
+                      transform: `translate(-50%, -50%) scale(${customDraft.logoScale})`,
+                      color: customDraft.textColor,
+                      borderColor: customDraft.accentColor,
+                      textShadow: '0 2px 8px rgba(0,0,0,.6)',
+                    }}
+                    onPointerDown={e => beginDrag('logo', e)}
+                    onPointerMove={moveDraggedItem}
+                    title="Перетащить AE"
+                  >
+                    <span className="font-black tracking-[-0.16em]">AE</span>
+                    <GripVertical size={11} className="inline-block ml-1 opacity-60" />
+                  </div>
+                  <div
+                    className="aemp-skin-editor-item text-[10px] font-bold tracking-[0.35em]"
+                    style={{ left: `${customDraft.titleX}%`, top: `${customDraft.titleY}%`, color: customDraft.textColor }}
+                    onPointerDown={e => beginDrag('title', e)}
+                    onPointerMove={moveDraggedItem}
+                    title="Перетащить заголовок"
+                  >AEMP PLAYER</div>
+                  <div className="absolute bottom-3 left-4 right-4 h-1 rounded-full" style={{ backgroundColor: customDraft.accentColor, opacity: 0.8 }} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    ['Фон', 'backgroundColor'],
+                    ['Панели', 'panelColor'],
+                    ['Акцент', 'accentColor'],
+                    ['Текст', 'textColor'],
+                  ] as [string, keyof CustomSkin][]).map(([label, key]) => (
+                    <label key={key} className="flex items-center justify-between gap-2 text-[10px]" style={{ color: 'var(--s-text)' }}>
+                      {label}
+                      <input
+                        type="color"
+                        value={customDraft[key] as string}
+                        onChange={e => updateDraft({ [key]: e.target.value } as Partial<CustomSkin>)}
+                        className="w-8 h-7 cursor-pointer border-0 bg-transparent p-0"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <SliderRow label="Размер AE" value={customDraft.logoScale} min={0.5} max={2} step={0.05} unit="×"
+                  onChange={value => updateDraft({ logoScale: value })} />
+                <SliderRow label="Прозрачность текстуры" value={Math.round(customDraft.textureOpacity * 100)} min={0} max={100} step={1} unit="%"
+                  onChange={value => updateDraft({ textureOpacity: value / 100 })} />
+
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded border cursor-pointer text-[10px]"
+                    style={{ color: 'var(--s-text)', borderColor: 'var(--s-track)' }}>
+                    <Upload size={13} /> Загрузить текстуру
+                    <input type="file" accept="image/*" className="hidden" onChange={readTexture} />
+                  </label>
+                  {customDraft.textureDataUrl && (
+                    <button onClick={() => updateDraft({ textureDataUrl: '' })} className="p-2 rounded border text-[var(--s-muted)]"
+                      style={{ borderColor: 'var(--s-track)' }} title="Убрать текстуру"><X size={13} /></button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={saveCustomSkin}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded text-[10px] font-bold"
+                    style={{ backgroundColor: customDraft.accentColor, color: '#171717' }}>
+                    <Save size={13} /> Сохранить в память телефона
+                  </button>
+                  <button onClick={resetCustomSkin}
+                    className="px-3 py-2 rounded border text-[10px]"
+                    style={{ borderColor: 'var(--s-track)', color: 'var(--s-muted)' }} title="Отключить пользовательский скин">
+                    <RotateCcw size={13} />
+                  </button>
                 </div>
               </>)}
 

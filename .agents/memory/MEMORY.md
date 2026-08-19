@@ -1,0 +1,1 @@
+- [Mobile icon assets](mobile-icon-assets.md) — Android launcher updates require both web icons and native mipmap resources.

@@ -80,9 +80,13 @@ export function Playlist() {
   });
 
   const processFiles = async (fileList: File[]) => {
-    const allowedTypes = ['.mp3', '.flac', '.wav', '.ogg', '.aac', '.m4a'];
+    const allowedTypes = [
+      '.mp3', '.flac', '.wav', '.ogg', '.oga', '.aac', '.m4a',
+      '.opus', '.weba', '.aiff', '.aif', '.ape', '.wma',
+    ];
     const validFiles = fileList.filter(f =>
-      allowedTypes.some(ext => f.name.toLowerCase().endsWith(ext)) || f.type.startsWith('audio/')
+      !f.type.startsWith('video/') &&
+      (allowedTypes.some(ext => f.name.toLowerCase().endsWith(ext)) || f.type.startsWith('audio/'))
     );
     if (validFiles.length === 0) return;
 
@@ -352,7 +356,14 @@ export function Playlist() {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" multiple accept="audio/*" className="hidden" onChange={onFileInput} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="audio/*,.flac,.oga,.opus,.weba,.aiff,.aif,.ape,.wma"
+        className="hidden"
+        onChange={onFileInput}
+      />
     </div>
   );
 }
