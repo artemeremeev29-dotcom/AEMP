@@ -3,7 +3,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useSettings } from '../context/SettingsContext';
 import { Play, Pause, SkipBack, SkipForward, Square, Volume2, VolumeX, Menu } from 'lucide-react';
 
-export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () => void; isEQActive: boolean }) {
+export function TransportControls() {
   const { audioState, audioActions, actions, playlist, currentTrackId } = usePlayer();
   const { setOpenSettings } = useSettings();
 
@@ -56,15 +56,6 @@ export function TransportControls({ onToggleEQ, isEQActive }: { onToggleEQ: () =
       </div>
 
       <div className="flex-1" />
-
-      {/* EQ toggle */}
-      <button
-        onClick={onToggleEQ}
-        className="px-2 py-0.5 text-xs font-bold border border-[#1e1e1e] rounded-sm transition-colors"
-        style={isEQActive ? { backgroundColor: '#1e1e1e', color: 'var(--accent)' } : {}}
-      >
-        EQ
-      </button>
 
       {/* Settings */}
       <button

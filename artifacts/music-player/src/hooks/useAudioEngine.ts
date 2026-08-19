@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-export const EQ_BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-
 export interface AudioEngineState {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
   volume: number;
   isMuted: boolean;
-  eqGains: number[];
 }
 
 export function useAudioEngine() {
@@ -17,7 +14,6 @@ export function useAudioEngine() {
   const mediaSourceRef   = useRef<MediaElementAudioSourceNode | null>(null);
   const gainNodeRef      = useRef<GainNode | null>(null);
   const analyserNodeRef  = useRef<AnalyserNode | null>(null);
-  const eqNodesRef       = useRef<BiquadFilterNode[]>([]);
   const objectUrlRef     = useRef<string | null>(null);
   const rafRef           = useRef<number>(0);
 
@@ -42,7 +38,6 @@ export function useAudioEngine() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
-  const [eqGains, setEqGains] = useState<number[]>(new Array(10).fill(0));
 
   const onTrackEndRef = useRef<(() => void) | undefined>(undefined);
 
@@ -61,27 +56,8 @@ export function useAudioEngine() {
     gain.gain.value = volumeRef.current;
     gainNodeRef.current = gain;
 
-    const savedEq = localStorage.getItem('volt-eq');
-    let initialEq: number[] = new Array(10).fill(0);
-    if (savedEq) {
-      try { initialEq = JSON.parse(savedEq); } catch (_) {}
-    }
-    setEqGains(initialEq);
-
-    const eqNodes = EQ_BANDS.map((freq, i) => {
-      const f = ctx.createBiquadFilter();
-      f.type = 'peaking';
-      f.frequency.value = freq;
-      f.Q.value = 1.4;
-      f.gain.value = initialEq[i] ?? 0;
-      return f;
-    });
-    eqNodesRef.current = eqNodes;
-
-    for (let i = 0; i < eqNodes.length - 1; i++) {
-      eqNodes[i].connect(eqNodes[i + 1]);
-    }
-    eqNodes[eqNodes.length - 1].connect(analyser);
+    // Keep the audio graph intentionally small: source → analyser → gain.
+    // There is no equalizer stage in AEMP.
     analyser.connect(gain);
     gain.connect(ctx.destination);
   }, []);
@@ -189,7 +165,7 @@ export function useAudioEngine() {
     audioElRef.current = audio;
 
     const source = ctx.createMediaElementSource(audio);
-    source.connect(eqNodesRef.current[0] ?? gainNodeRef.current!);
+    source.connect(analyserNodeRef.current ?? gainNodeRef.current!);
     mediaSourceRef.current = source;
 
     let crossfadeTriggered = false;
@@ -320,27 +296,6 @@ export function useAudioEngine() {
     }
   }, []);
 
-  // ─── EQ ─────────────────────────────────────────────────────────────────────
-  const setEqBand = useCallback((index: number, gainValue: number) => {
-    if (eqNodesRef.current[index]) {
-      eqNodesRef.current[index].gain.value = gainValue;
-    }
-    setEqGains(prev => {
-      const next = [...prev];
-      next[index] = gainValue;
-      localStorage.setItem('volt-eq', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const setAllEq = useCallback((gains: number[]) => {
-    gains.forEach((g, i) => {
-      if (eqNodesRef.current[i]) eqNodesRef.current[i].gain.value = g;
-    });
-    setEqGains(gains);
-    localStorage.setItem('volt-eq', JSON.stringify(gains));
-  }, []);
-
   const getAnalyserNode = useCallback(() => analyserNodeRef.current, []);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────────────
@@ -357,7 +312,7 @@ export function useAudioEngine() {
   }, []);
 
   return {
-    state: { isPlaying, currentTime, duration, volume, isMuted, eqGains },
+    state: { isPlaying, currentTime, duration, volume, isMuted },
     actions: {
       loadFile,
       togglePlayPause,
@@ -365,8 +320,6 @@ export function useAudioEngine() {
       seek,
       setVolume: setVolumeValue,
       toggleMute,
-      setEqBand,
-      setAllEq,
       setOnTrackEnd: (cb: () => void) => { onTrackEndRef.current = cb; },
       getAnalyserNode,
       initAudioContext,

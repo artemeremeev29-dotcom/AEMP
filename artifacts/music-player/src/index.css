@@ -85,15 +85,6 @@ body,
 ::-webkit-scrollbar-thumb { background: var(--border); }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent, #ff8c00); }
 
-/* ── EQ vertical sliders ──────────────────────────────────────────────────── */
-input[type=range].eq-slider {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 6px;
-  cursor: pointer;
-  accent-color: var(--accent, #ff8c00);
-}
-
 /* ── Transport volume slider ──────────────────────────────────────────────── */
 input[type=range].slider-thumb-dark {
   accent-color: #1e1e1e;
@@ -396,4 +387,76 @@ input[type=range].slider-thumb-dark::-moz-range-thumb {
   --border: #666666;
   --accent: #0055ff;
   --accent-rgb: 0, 85, 255;
+}
+
+[data-skin="custom"] {
+  --background: var(--custom-bg);
+  --player-bg: var(--custom-panel);
+  --darker: color-mix(in srgb, var(--custom-panel) 78%, #000);
+  --darkest: color-mix(in srgb, var(--custom-panel) 58%, #000);
+  --text-main: var(--custom-text);
+  --text-sec: color-mix(in srgb, var(--custom-text) 58%, #000);
+  --border: color-mix(in srgb, var(--custom-text) 28%, var(--custom-panel));
+  --accent: var(--custom-accent);
+}
+
+.aemp-custom-skin-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aemp-custom-skin-texture {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  mix-blend-mode: screen;
+}
+.aemp-custom-skin-logo,
+.aemp-custom-skin-title {
+  position: absolute;
+  white-space: nowrap;
+  font-family: Arial Black, Impact, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.12em;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+}
+.aemp-custom-skin-logo {
+  font-size: clamp(48px, 18vw, 110px);
+  opacity: 0.11;
+}
+.aemp-custom-skin-title {
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  letter-spacing: 0.45em;
+  opacity: 0.2;
+}
+.aemp-ae-logo-placeholder {
+  color: #929292;
+  font: 900 36px/0.9 Arial Black, Impact, sans-serif;
+  letter-spacing: -0.17em;
+  padding-right: 0.17em;
+  opacity: 0.85;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.7);
+}
+.aemp-skin-editor-stage {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  border: 1px solid var(--s-divider);
+  border-radius: 4px;
+  touch-action: none;
+  background: var(--s-header);
+}
+.aemp-skin-editor-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.aemp-skin-editor-item:active {
+  cursor: grabbing;
 }

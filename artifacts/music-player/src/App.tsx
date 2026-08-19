@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { SpectrumAnalyzer } from './components/SpectrumAnalyzer';
-import { Equalizer } from './components/Equalizer';
 import { Playlist } from './components/Playlist';
 import { TransportControls } from './components/TransportControls';
 import { Settings } from './components/Settings';
@@ -15,8 +14,16 @@ function formatTime(s: number) {
   return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
+function colorToRgb(hex: string) {
+  const value = hex.replace('#', '');
+  return [
+    parseInt(value.slice(0, 2), 16) || 0,
+    parseInt(value.slice(2, 4), 16) || 0,
+    parseInt(value.slice(4, 6), 16) || 0,
+  ].join(', ');
+}
+
 function AppContent() {
-  const [showEQ, setShowEQ] = useState(false);
   const [currentSkin, setCurrentSkin] = useState<'default' | 'cyberpunk' | 'phonk' | 'retro-silver'>('default');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [abStart, setAbStart] = useState<number | null>(null);
@@ -29,6 +36,15 @@ function AppContent() {
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   const currentTrack = playlist.find(t => t.id === currentTrackId);
+  const activeSkin = settings.customSkin.enabled ? 'custom' : currentSkin;
+  const customSkinVars = settings.customSkin.enabled ? {
+    '--custom-bg': settings.customSkin.backgroundColor,
+    '--custom-panel': settings.customSkin.panelColor,
+    '--custom-accent': settings.customSkin.accentColor,
+    '--custom-text': settings.customSkin.textColor,
+    '--accent': settings.customSkin.accentColor,
+    '--accent-rgb': colorToRgb(settings.customSkin.accentColor),
+  } as React.CSSProperties : undefined;
 
   useEffect(() => {
     if (abStart === null || abEnd === null || abEnd <= abStart) return;
@@ -119,12 +135,33 @@ function AppContent() {
 
   return (
     <div
-      data-skin={currentSkin}
+      data-skin={activeSkin}
       
       className="aemp-shell w-full flex flex-col shadow-[0_10px_60px_rgba(0,0,0,0.6)] overflow-hidden h-full relative"
       data-fullscreen={isFullscreen ? 'true' : 'false'}
-      style={{ backgroundColor: 'var(--player-bg)' }}
+      style={{ backgroundColor: 'var(--player-bg)', ...customSkinVars }}
     >
+      {settings.customSkin.enabled && (
+        <div className="aemp-custom-skin-layer" aria-hidden="true">
+          {settings.customSkin.textureDataUrl && (
+            <div className="aemp-custom-skin-texture" style={{
+              backgroundImage: `url(${settings.customSkin.textureDataUrl})`,
+              opacity: settings.customSkin.textureOpacity,
+            }} />
+          )}
+          <div className="aemp-custom-skin-logo" style={{
+            left: `${settings.customSkin.logoX}%`,
+            top: `${settings.customSkin.logoY}%`,
+            transform: `translate(-50%, -50%) scale(${settings.customSkin.logoScale})`,
+            color: settings.customSkin.textColor,
+          }}>AE</div>
+          <div className="aemp-custom-skin-title" style={{
+            left: `${settings.customSkin.titleX}%`,
+            top: `${settings.customSkin.titleY}%`,
+            color: settings.customSkin.textColor,
+          }}>AEMP</div>
+        </div>
+      )}
       {/* ── Status bar ─────────────────────────────────────────────────── */}
       {settings.showStatusBar && (
         <div className="aemp-status-bar h-[28px] shrink-0 flex justify-between items-center px-2 border-b text-[11px] font-mono select-none"
@@ -138,14 +175,23 @@ function AppContent() {
           </div>
           <div className="aemp-window-controls flex gap-2 items-center shrink-0" style={{ color: 'var(--text-sec)' }}>
             <select 
-              value={currentSkin} 
-              onChange={(e) => setCurrentSkin(e.target.value as any)}
+              value={activeSkin}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'custom') {
+                  updateSettings({ customSkin: { ...settings.customSkin, enabled: true } });
+                } else {
+                  setCurrentSkin(value as typeof currentSkin);
+                  updateSettings({ customSkin: { ...settings.customSkin, enabled: false } });
+                }
+              }}
               className="bg-[var(--darkest)] text-[var(--text-main)] border border-[var(--border)] text-[9px] px-1 py-0.5 rounded cursor-pointer mr-2 outline-none font-sans"
             >
               <option value="default">Стандартный</option>
               <option value="cyberpunk">Киберпанк</option>
               <option value="phonk">Дрифт Фонк</option>
               <option value="retro-silver">Ретро Серебро</option>
+              <option value="custom">Мой скин</option>
             </select>
 
             <button
@@ -226,9 +272,7 @@ function AppContent() {
                 <img src={currentTrack!.coverArt} className="w-full h-full object-cover" alt="Обложка" />
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <div style={{ width: 0, height: 0,
-                    borderLeft: '20px solid transparent', borderRight: '20px solid transparent',
-                    borderBottom: `34px solid var(--accent)`, opacity: 0.7 }} />
+                  <div className="aemp-ae-logo-placeholder">AE</div>
                   <span className="text-[9px]" style={{ color: 'var(--text-sec)' }}>НЕТ ОБЛОЖКИ</span>
                 </div>
               )}
@@ -295,25 +339,11 @@ function AppContent() {
       </div>
 
       {/* ── Transport ──────────────────────────────────────────────────── */}
-      <TransportControls onToggleEQ={() => setShowEQ(!showEQ)} isEQActive={showEQ} />
+      <TransportControls />
 
       {/* ── Playlist + overlays ────────────────────────────────────────── */}
       <div className="aemp-playlist-area flex-1 relative min-h-0">
         <Playlist />
-
-        {/* EQ overlay */}
-        <AnimatePresence initial={false}>
-          {showEQ && (
-            <motion.div
-              initial={{ y: '-100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '-100%', opacity: 0 }} transition={{ duration: 0.2 }}
-              className="absolute inset-x-0 top-0 border-b z-20 shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
-              style={{ height: 140, borderColor: 'var(--border)', backgroundColor: 'var(--player-bg)' }}
-            >
-              <Equalizer />
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Bookmark resume banner */}
         <AnimatePresence>

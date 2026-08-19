@@ -4,6 +4,22 @@ export type CoverStyle     = 'square' | 'vinyl' | 'blur';
 export type VisualizerStyle = 'bars' | 'circle' | 'wave';
 export type ThemeMode       = 'dark' | 'light' | 'auto';
 
+export interface CustomSkin {
+  enabled: boolean;
+  name: string;
+  backgroundColor: string;
+  panelColor: string;
+  accentColor: string;
+  textColor: string;
+  textureDataUrl: string;
+  textureOpacity: number;
+  logoX: number;
+  logoY: number;
+  logoScale: number;
+  titleX: number;
+  titleY: number;
+}
+
 export interface Settings {
   fadeInMs: number;
   fadeOutMs: number;
@@ -15,6 +31,7 @@ export interface Settings {
   coverStyle: CoverStyle;
   visualizerStyle: VisualizerStyle;
   theme: ThemeMode;
+  customSkin: CustomSkin;
 }
 
 const DEFAULTS: Settings = {
@@ -28,6 +45,21 @@ const DEFAULTS: Settings = {
   coverStyle: 'square',
   visualizerStyle: 'bars',
   theme: 'dark',
+  customSkin: {
+    enabled: false,
+    name: 'Мой AEMP',
+    backgroundColor: '#1a1a1a',
+    panelColor: '#2a2a2a',
+    accentColor: '#ff8c00',
+    textColor: '#cccccc',
+    textureDataUrl: '',
+    textureOpacity: 0.22,
+    logoX: 50,
+    logoY: 42,
+    logoScale: 1,
+    titleX: 50,
+    titleY: 12,
+  },
 };
 
 interface SettingsContextType {
