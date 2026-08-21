@@ -18,7 +18,7 @@ export function useAudioEngine() {
   const rafRef           = useRef<number>(0);
 
   // Refs for values that need to be read inside callbacks without stale closures
-  const volumeRef        = useRef<number>(0.8);
+  const volumeRef        = useRef<number>(1.0);
   const isMutedRef       = useRef<boolean>(false);
 
   // Fade / crossfade settings refs
@@ -36,7 +36,7 @@ export function useAudioEngine() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
 
   const onTrackEndRef = useRef<(() => void) | undefined>(undefined);
