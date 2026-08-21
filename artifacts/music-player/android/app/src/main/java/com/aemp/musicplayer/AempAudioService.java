@@ -86,7 +86,7 @@ public class AempAudioService extends Service {
     }
 
     private void updatePlaybackState(boolean playing) {
-        long state = playing
+        int state = playing
                 ? PlaybackStateCompat.STATE_PLAYING
                 : PlaybackStateCompat.STATE_PAUSED;
 
