@@ -1,4 +1,3 @@
-```java
 package com.aemp.musicplayer;
 
 import android.app.Notification;
@@ -310,4 +309,3 @@ public class AempAudioService extends Service {
         return null;
     }
 }
-```
