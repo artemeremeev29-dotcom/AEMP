@@ -1,3 +1,4 @@
+```java
 package com.aemp.musicplayer;
 
 import android.app.Notification;
@@ -46,7 +47,6 @@ public class AempAudioService extends Service {
         mediaSession = new MediaSessionCompat(this, "AEMP");
 
         mediaSession.setCallback(new MediaSessionCompat.Callback() {
-
             @Override
             public void onPlay() {
                 updatePlaybackState(true);
@@ -59,23 +59,18 @@ public class AempAudioService extends Service {
 
             @Override
             public void onSkipToNext() {
-                // Будет подключено к AEMP на следующем этапе.
+                // Будет подключено к React-плееру следующим этапом.
             }
 
             @Override
             public void onSkipToPrevious() {
-                // Будет подключено к AEMP на следующем этапе.
+                // Будет подключено к React-плееру следующим этапом.
             }
         });
 
         mediaSession.setActive(true);
 
-        updateMetadata(
-                currentTitle,
-                currentArtist
-        );
-
-        updatePlaybackState(true);
+        updateMetadata(currentTitle, currentArtist);
 
         startForeground(
                 NOTIFICATION_ID,
@@ -85,7 +80,6 @@ public class AempAudioService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
             NotificationChannel channel =
                     new NotificationChannel(
                             CHANNEL_ID,
@@ -98,9 +92,7 @@ public class AempAudioService extends Service {
             );
 
             NotificationManager manager =
-                    getSystemService(
-                            NotificationManager.class
-                    );
+                    getSystemService(NotificationManager.class);
 
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -123,7 +115,6 @@ public class AempAudioService extends Service {
                         : "AEMP";
 
         if (mediaSession != null) {
-
             MediaMetadataCompat metadata =
                     new MediaMetadataCompat.Builder()
                             .putString(
@@ -140,9 +131,7 @@ public class AempAudioService extends Service {
         }
     }
 
-    private void updatePlaybackState(
-            boolean playing
-    ) {
+    private void updatePlaybackState(boolean playing) {
         int state = playing
                 ? PlaybackStateCompat.STATE_PLAYING
                 : PlaybackStateCompat.STATE_PAUSED;
@@ -162,14 +151,12 @@ public class AempAudioService extends Service {
                         )
                         .build();
 
-        mediaSession.setPlaybackState(
-                playbackState
-        );
+        if (mediaSession != null) {
+            mediaSession.setPlaybackState(playbackState);
+        }
 
         NotificationManager manager =
-                getSystemService(
-                        NotificationManager.class
-                );
+                getSystemService(NotificationManager.class);
 
         if (manager != null) {
             manager.notify(
@@ -180,12 +167,8 @@ public class AempAudioService extends Service {
     }
 
     private Notification createNotification() {
-
         Intent intent =
-                new Intent(
-                        this,
-                        MainActivity.class
-                );
+                new Intent(this, MainActivity.class);
 
         PendingIntent pendingIntent =
                 PendingIntent.getActivity(
@@ -200,70 +183,76 @@ public class AempAudioService extends Service {
                         )
                 );
 
-        return new NotificationCompat.Builder(
-                this,
-                CHANNEL_ID
-        )
-                .setContentTitle(currentTitle)
-                .setContentText(currentArtist)
-                .setSmallIcon(
-                        android.R.drawable.ic_media_play
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(
+                        this,
+                        CHANNEL_ID
                 )
-                .setContentIntent(
-                        pendingIntent
-                )
-                .setOngoing(true)
-                .setCategory(
-                        NotificationCompat.CATEGORY_TRANSPORT
-                )
-                .setPriority(
-                        NotificationCompat.PRIORITY_LOW
-                )
-                .setStyle(
-                        new MediaStyle()
-                                .setMediaSession(
-                                        mediaSession.getSessionToken()
-                                )
-                                .setShowActionsInCompactView(
-                                        0,
-                                        1,
-                                        2
-                                )
-                )
-                .addAction(
-                        new NotificationCompat.Action(
-                                android.R.drawable.ic_media_previous,
-                                "Предыдущий",
-                                MediaButtonReceiver
-                                        .buildMediaButtonPendingIntent(
-                                                this,
-                                                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                                        )
+                        .setContentTitle(currentTitle)
+                        .setContentText(currentArtist)
+                        .setSmallIcon(
+                                android.R.drawable.ic_media_play
                         )
-                )
-                .addAction(
-                        new NotificationCompat.Action(
-                                android.R.drawable.ic_media_play,
-                                "Воспроизвести",
-                                MediaButtonReceiver
-                                        .buildMediaButtonPendingIntent(
-                                                this,
-                                                PlaybackStateCompat.ACTION_PLAY
-                                        )
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .setCategory(
+                                NotificationCompat.CATEGORY_TRANSPORT
                         )
-                )
-                .addAction(
-                        new NotificationCompat.Action(
-                                android.R.drawable.ic_media_next,
-                                "Следующий",
-                                MediaButtonReceiver
-                                        .buildMediaButtonPendingIntent(
-                                                this,
-                                                PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                                        )
-                        )
-                )
-                .build();
+                        .setPriority(
+                                NotificationCompat.PRIORITY_LOW
+                        );
+
+        if (mediaSession != null) {
+            builder.setStyle(
+                    new MediaStyle()
+                            .setMediaSession(
+                                    mediaSession.getSessionToken()
+                            )
+                            .setShowActionsInCompactView(
+                                    0,
+                                    1,
+                                    2
+                            )
+            );
+
+            builder.addAction(
+                    new NotificationCompat.Action(
+                            android.R.drawable.ic_media_previous,
+                            "Предыдущий",
+                            MediaButtonReceiver
+                                    .buildMediaButtonPendingIntent(
+                                            this,
+                                            PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                                    )
+                    )
+            );
+
+            builder.addAction(
+                    new NotificationCompat.Action(
+                            android.R.drawable.ic_media_play,
+                            "Воспроизвести",
+                            MediaButtonReceiver
+                                    .buildMediaButtonPendingIntent(
+                                            this,
+                                            PlaybackStateCompat.ACTION_PLAY
+                                    )
+                    )
+            );
+
+            builder.addAction(
+                    new NotificationCompat.Action(
+                            android.R.drawable.ic_media_next,
+                            "Следующий",
+                            MediaButtonReceiver
+                                    .buildMediaButtonPendingIntent(
+                                            this,
+                                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                                    )
+                    )
+            );
+        }
+
+        return builder.build();
     }
 
     @Override
@@ -272,33 +261,20 @@ public class AempAudioService extends Service {
             int flags,
             int startId
     ) {
-
         if (intent != null) {
-
-            String action =
-                    intent.getAction();
+            String action = intent.getAction();
 
             if (ACTION_UPDATE_METADATA.equals(action)) {
-
                 String title =
-                        intent.getStringExtra(
-                                EXTRA_TITLE
-                        );
+                        intent.getStringExtra(EXTRA_TITLE);
 
                 String artist =
-                        intent.getStringExtra(
-                                EXTRA_ARTIST
-                        );
+                        intent.getStringExtra(EXTRA_ARTIST);
 
-                updateMetadata(
-                        title,
-                        artist
-                );
+                updateMetadata(title, artist);
 
                 NotificationManager manager =
-                        getSystemService(
-                                NotificationManager.class
-                        );
+                        getSystemService(NotificationManager.class);
 
                 if (manager != null) {
                     manager.notify(
@@ -306,7 +282,6 @@ public class AempAudioService extends Service {
                             createNotification()
                     );
                 }
-
             } else {
                 MediaButtonReceiver.handleIntent(
                         mediaSession,
@@ -320,7 +295,6 @@ public class AempAudioService extends Service {
 
     @Override
     public void onDestroy() {
-
         if (mediaSession != null) {
             mediaSession.setActive(false);
             mediaSession.release();
@@ -332,9 +306,8 @@ public class AempAudioService extends Service {
 
     @Nullable
     @Override
-    public IBinder onBind(
-            Intent intent
-    ) {
+    public IBinder onBind(Intent intent) {
         return null;
     }
 }
+```
