@@ -11,28 +11,17 @@ import android.os.IBinder;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.media.app.NotificationCompat.MediaStyle;
-import androidx.media.session.MediaButtonReceiver;
-
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 
 public class AempAudioService extends Service {
 
     public static final String ACTION_UPDATE_METADATA =
             "com.aemp.musicplayer.UPDATE_METADATA";
 
-    public static final String EXTRA_TITLE =
-            "com.aemp.musicplayer.TITLE";
-
-    public static final String EXTRA_ARTIST =
-            "com.aemp.musicplayer.ARTIST";
+    public static final String EXTRA_TITLE = "title";
+    public static final String EXTRA_ARTIST = "artist";
 
     private static final String CHANNEL_ID = "aemp_playback";
     private static final int NOTIFICATION_ID = 1001;
-
-    private MediaSessionCompat mediaSession;
 
     private String currentTitle = "AEMP";
     private String currentArtist = "AEMP";
@@ -40,45 +29,86 @@ public class AempAudioService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-
         createNotificationChannel();
+        startForeground(NOTIFICATION_ID, buildNotification());
+    }
 
-        mediaSession = new MediaSessionCompat(this, "AEMP");
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
 
-        mediaSession.setCallback(new MediaSessionCompat.Callback() {
-            @Override
-            public void onPlay() {
-                updatePlaybackState(true);
+        if (intent != null) {
+            String action = intent.getAction();
+
+            if (ACTION_UPDATE_METADATA.equals(action)) {
+                currentTitle = intent.getStringExtra(EXTRA_TITLE);
+                currentArtist = intent.getStringExtra(EXTRA_ARTIST);
+
+                if (currentTitle == null) {
+                    currentTitle = "AEMP";
+                }
+
+                if (currentArtist == null) {
+                    currentArtist = "AEMP";
+                }
+
+                updateNotification();
+            }
+        }
+
+        return START_STICKY;
+    }
+
+    private Notification buildNotification() {
+
+        Intent launchIntent = getPackageManager()
+                .getLaunchIntentForPackage(getPackageName());
+
+        PendingIntent contentIntent = null;
+
+        if (launchIntent != null) {
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= PendingIntent.FLAG_IMMUTABLE;
             }
 
-            @Override
-            public void onPause() {
-                updatePlaybackState(false);
-            }
+            contentIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    launchIntent,
+                    flags
+            );
+        }
 
-            @Override
-            public void onSkipToNext() {
-                // Будет подключено к React-плееру следующим этапом.
-            }
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setSmallIcon(android.R.drawable.ic_media_play)
+                        .setContentTitle(currentTitle)
+                        .setContentText(currentArtist)
+                        .setOngoing(true)
+                        .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+                        .setPriority(NotificationCompat.PRIORITY_LOW);
 
-            @Override
-            public void onSkipToPrevious() {
-                // Будет подключено к React-плееру следующим этапом.
-            }
-        });
+        if (contentIntent != null) {
+            builder.setContentIntent(contentIntent);
+        }
 
-        mediaSession.setActive(true);
+        return builder.build();
+    }
 
-        updateMetadata(currentTitle, currentArtist);
+    private void updateNotification() {
+        NotificationManager manager =
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-        startForeground(
-                NOTIFICATION_ID,
-                createNotification()
-        );
+        if (manager != null) {
+            manager.notify(NOTIFICATION_ID, buildNotification());
+        }
     }
 
     private void createNotificationChannel() {
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
             NotificationChannel channel =
                     new NotificationChannel(
                             CHANNEL_ID,
@@ -86,9 +116,7 @@ public class AempAudioService extends Service {
                             NotificationManager.IMPORTANCE_LOW
                     );
 
-            channel.setDescription(
-                    "Управление воспроизведением AEMP"
-            );
+            channel.setDescription("AEMP playback controls");
 
             NotificationManager manager =
                     getSystemService(NotificationManager.class);
@@ -99,208 +127,16 @@ public class AempAudioService extends Service {
         }
     }
 
-    private void updateMetadata(
-            String title,
-            String artist
-    ) {
-        currentTitle =
-                title != null && !title.isEmpty()
-                        ? title
-                        : "AEMP";
-
-        currentArtist =
-                artist != null && !artist.isEmpty()
-                        ? artist
-                        : "AEMP";
-
-        if (mediaSession != null) {
-            MediaMetadataCompat metadata =
-                    new MediaMetadataCompat.Builder()
-                            .putString(
-                                    MediaMetadataCompat.METADATA_KEY_TITLE,
-                                    currentTitle
-                            )
-                            .putString(
-                                    MediaMetadataCompat.METADATA_KEY_ARTIST,
-                                    currentArtist
-                            )
-                            .build();
-
-            mediaSession.setMetadata(metadata);
-        }
-    }
-
-    private void updatePlaybackState(boolean playing) {
-        int state = playing
-                ? PlaybackStateCompat.STATE_PLAYING
-                : PlaybackStateCompat.STATE_PAUSED;
-
-        PlaybackStateCompat playbackState =
-                new PlaybackStateCompat.Builder()
-                        .setActions(
-                                PlaybackStateCompat.ACTION_PLAY |
-                                PlaybackStateCompat.ACTION_PAUSE |
-                                PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                        )
-                        .setState(
-                                state,
-                                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                                1.0f
-                        )
-                        .build();
-
-        if (mediaSession != null) {
-            mediaSession.setPlaybackState(playbackState);
-        }
-
-        NotificationManager manager =
-                getSystemService(NotificationManager.class);
-
-        if (manager != null) {
-            manager.notify(
-                    NOTIFICATION_ID,
-                    createNotification()
-            );
-        }
-    }
-
-    private Notification createNotification() {
-        Intent intent =
-                new Intent(this, MainActivity.class);
-
-        PendingIntent pendingIntent =
-                PendingIntent.getActivity(
-                        this,
-                        0,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT |
-                        (
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                                        ? PendingIntent.FLAG_IMMUTABLE
-                                        : 0
-                        )
-                );
-
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(
-                        this,
-                        CHANNEL_ID
-                )
-                        .setContentTitle(currentTitle)
-                        .setContentText(currentArtist)
-                        .setSmallIcon(
-                                android.R.drawable.ic_media_play
-                        )
-                        .setContentIntent(pendingIntent)
-                        .setOngoing(true)
-                        .setCategory(
-                                NotificationCompat.CATEGORY_TRANSPORT
-                        )
-                        .setPriority(
-                                NotificationCompat.PRIORITY_LOW
-                        );
-
-        if (mediaSession != null) {
-            builder.setStyle(
-                    new MediaStyle()
-                            .setMediaSession(
-                                    mediaSession.getSessionToken()
-                            )
-                            .setShowActionsInCompactView(
-                                    0,
-                                    1,
-                                    2
-                            )
-            );
-
-            builder.addAction(
-                    new NotificationCompat.Action(
-                            android.R.drawable.ic_media_previous,
-                            "Предыдущий",
-                            MediaButtonReceiver
-                                    .buildMediaButtonPendingIntent(
-                                            this,
-                                            PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                                    )
-                    )
-            );
-
-            builder.addAction(
-                    new NotificationCompat.Action(
-                            android.R.drawable.ic_media_play,
-                            "Воспроизвести",
-                            MediaButtonReceiver
-                                    .buildMediaButtonPendingIntent(
-                                            this,
-                                            PlaybackStateCompat.ACTION_PLAY
-                                    )
-                    )
-            );
-
-            builder.addAction(
-                    new NotificationCompat.Action(
-                            android.R.drawable.ic_media_next,
-                            "Следующий",
-                            MediaButtonReceiver
-                                    .buildMediaButtonPendingIntent(
-                                            this,
-                                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                                    )
-                    )
-            );
-        }
-
-        return builder.build();
-    }
-
-    @Override
-    public int onStartCommand(
-            Intent intent,
-            int flags,
-            int startId
-    ) {
-        if (intent != null) {
-            String action = intent.getAction();
-
-            if (ACTION_UPDATE_METADATA.equals(action)) {
-                String title =
-                        intent.getStringExtra(EXTRA_TITLE);
-
-                String artist =
-                        intent.getStringExtra(EXTRA_ARTIST);
-
-                updateMetadata(title, artist);
-
-                NotificationManager manager =
-                        getSystemService(NotificationManager.class);
-
-                if (manager != null) {
-                    manager.notify(
-                            NOTIFICATION_ID,
-                            createNotification()
-                    );
-                }
-            } else {
-                MediaButtonReceiver.handleIntent(
-                        mediaSession,
-                        intent
-                );
-            }
-        }
-
-        return START_STICKY;
-    }
-
     @Override
     public void onDestroy() {
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
-            mediaSession.release();
-            mediaSession = null;
-        }
-
         super.onDestroy();
+
+        NotificationManager manager =
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+        if (manager != null) {
+            manager.cancel(NOTIFICATION_ID);
+        }
     }
 
     @Nullable
