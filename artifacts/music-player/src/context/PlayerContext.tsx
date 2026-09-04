@@ -12,6 +12,14 @@ export interface Track {
   embeddedCoverArt?: string;
 }
 
+interface PlaylistMetadata {
+  id: string;
+  name: string;
+  artist: string;
+  duration: number;
+  coverArt?: string;
+}
+
 interface PlayerContextType {
   audioState: AudioEngineState;
   audioActions: ReturnType<typeof useAudioEngine>['actions'];
@@ -42,7 +50,7 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
-// ── Bookmark helpers ──────────────────────────────────────────────────────────
+// ── Bookmark helpers ────────────────────────────────────────────────────────
 const bmKey = (t: Track) => `aemp-bm-${t.name}_${t.file.size}`;
 const saveBookmark = (t: Track, time: number) => {
   if (time > 10) localStorage.setItem(bmKey(t), String(Math.floor(time)));
@@ -52,6 +60,31 @@ const loadBookmark = (t: Track): number | null => {
   return v ? parseFloat(v) : null;
 };
 const clearBookmark = (t: Track) => localStorage.removeItem(bmKey(t));
+
+// ── Playlist persistence helpers ────────────────────────────────────────────
+const PLAYLIST_STORAGE_KEY = 'aemp-playlist-metadata';
+
+const savePlaylistMetadata = (playlist: Track[]) => {
+  const metadata: PlaylistMetadata[] = playlist.map(track => ({
+    id: track.id,
+    name: track.name,
+    artist: track.artist,
+    duration: track.duration,
+    coverArt: track.coverArt,
+  }));
+  localStorage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(metadata));
+};
+
+const loadPlaylistMetadata = (): PlaylistMetadata[] => {
+  const saved = localStorage.getItem(PLAYLIST_STORAGE_KEY);
+  if (!saved) return [];
+  try {
+    return JSON.parse(saved);
+  } catch (e) {
+    console.error('Failed to parse saved playlist:', e);
+    return [];
+  }
+};
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { state: audioState, actions: audioActions } = useAudioEngine();
@@ -100,6 +133,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }, 5000);
     return () => { if (bookmarkSaveTimerRef.current) clearInterval(bookmarkSaveTimerRef.current); };
   }, [audioState.isPlaying, audioState.currentTime]);
+
+  // ── Save playlist metadata to localStorage ───────────────────────────────
+  useEffect(() => {
+    if (playlist.length > 0) {
+      savePlaylistMetadata(playlist);
+    }
+  }, [playlist]);
 
   const playTrack = useCallback(async (id: string) => {
     const track = playlist.find(t => t.id === id);
