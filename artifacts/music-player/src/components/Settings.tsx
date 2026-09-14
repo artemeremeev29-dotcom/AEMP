@@ -5,7 +5,7 @@ import { useSettings } from '../context/SettingsContext';
 import type { CoverStyle, VisualizerStyle, ThemeMode, CustomSkin } from '../context/SettingsContext';
 
 const PRESET_COLORS = ['#ff8c00','#ff4444','#ff44aa','#aa44ff','#4488ff','#44ccff','#44dd88','#cccc00'];
-const SLEEP_OPTIONS = [15, 30, 45, 60, 90];
+const SLEEP_OPTIONS = [0.3, 15, 30, 45, 60, 90];
 
 function SliderRow({ label, value, min, max, step, unit, onChange }: {
   label: string; value: number; min: number; max: number; step: number; unit: string;
